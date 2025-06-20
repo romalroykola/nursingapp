@@ -1,0 +1,683 @@
+
+<!DOCTYPE html>
+<html lang="en" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nurses Pro App Clinical Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            background-color: #e2e8f0; /* Light mode bg for area outside app screen */
+        }
+        .dark body { background-color: #020617; /* Darker bg for area outside app screen */ }
+
+        #app-screen {
+            background-color: #f8fafc; /* Light mode app screen bg */
+        }
+        .dark #app-screen {
+            background-color: #0f172a; /* Dark mode app screen bg */
+        }
+        
+        /* General text color for light mode */
+        .text-main-light { color: #1e293b; } /* slate-800 */
+        .text-secondary-light { color: #475569; } /* slate-600 */
+        .text-tertiary-light { color: #64748b; } /* slate-500 */
+
+        /* Overrides for dark mode */
+        .dark .card { background-color: #1e293b; border-color: #334155; }
+        .dark .header-gradient {
+             background-image: linear-gradient(to bottom, rgba(15, 23, 42, 0.95), rgba(15, 23, 42, 0.8), rgba(15, 23, 42, 0.4), transparent);
+        }
+        .header-gradient {
+             background-image: linear-gradient(to bottom, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.8), rgba(255, 255, 255, 0.4), transparent);
+        }
+
+        .dark .search-container input { background-color: #334155; border-color: #475569; color: #f1f5f9; }
+        
+        /* Specific Dark Mode Text Colors */
+        .dark .text-slate-900 { color: #f1f5f9; } 
+        .dark .text-slate-800 { color: #e2e8f0; } 
+        .dark .text-slate-700 { color: #cbd5e1; }
+        .dark .text-slate-600 { color: #94a3b8; }
+        .dark .text-slate-500 { color: #64748b; }
+
+        .dark .bg-slate-50 { background-color: #1e293b; }
+        .dark .bg-slate-100 { background-color: #334155; } /* results card bg */
+        .dark .category-tabs-bg { background-color: rgba(30, 41, 59, 0.8); } /* dark:bg-slate-800 with opacity */
+        .category-tabs-bg { background-color: rgba(248, 250, 252, 0.8); } /* bg-slate-50 with opacity */
+
+
+        .dark .bg-slate-200 { background-color: #475569; } /* category tabs (non-active), details bg */
+        .dark .hover\:bg-slate-300:hover { background-color: #475569; } /* category tabs hover */
+        .dark .border-slate-200 { border-color: #334155; }
+        .dark .border-slate-300 { border-color: #475569; } /* input borders */
+        .dark .modal-content { background-color: #1e293b; }
+        .dark select, .dark input[type="number"], .dark input[type="date"], .dark input[type="text"]:not(#search-bar) { background-color: #334155; color: #f1f5f9; border-color: #475569;}
+        .dark ::-webkit-scrollbar-track { background: #1e293b; }
+        .dark ::-webkit-scrollbar-thumb { background: #475569; }
+        .dark ::-webkit-scrollbar-thumb:hover { background: #64748b; }
+        .dark .hover\:bg-slate-200:hover { background-color: #334155; }
+        
+        /* Custom scrollbar for main body and category tabs */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        body::-webkit-scrollbar-track { background: #f1f1f1; }
+        .dark body::-webkit-scrollbar-track { background: #2d3748; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        .dark ::-webkit-scrollbar-thumb { background: #4a5568; }
+        .dark ::-webkit-scrollbar-thumb:hover { background: #718096; }
+
+        .progress-ring__circle {
+            transition: stroke-dashoffset 0.5s ease-out;
+            transform: rotate(-90deg);
+            transform-origin: 50% 50%;
+        }
+
+        .fade-in { animation: fadeIn 0.3s ease-out forwards; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .category-tab.active-tab {
+            background-color: #3b82f6; /* blue-500 */
+            color: white !important; /* Ensure text is white */
+        }
+        .dark .category-tab.active-tab {
+            background-color: #2563eb; /* blue-600 */
+            color: white !important; /* Ensure text is white */
+        }
+        #category-tabs-container::-webkit-scrollbar {
+            height: 4px;
+        }
+        #category-tabs-container::-webkit-scrollbar-thumb {
+            background: #94a3b8; /* slate-400 */
+            border-radius: 2px;
+        }
+        .dark #category-tabs-container::-webkit-scrollbar-thumb {
+            background: #475569; /* slate-600 */
+        }
+        .shape-display {
+            width: 40px; /* 2.5rem */
+            height: 40px; /* 2.5rem */
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600; /* semibold */
+            font-size: 0.875rem; /* text-sm */
+        }
+        .shape-circle { border-radius: 9999px; /* rounded-full */ }
+        .shape-square { border-radius: 0.375rem; /* rounded-md */ }
+
+        .category-title-sticky {
+            position: sticky;
+            /* top value will be set by JS */
+            /* background-color removed for no shade effect */
+            /* backdrop-filter removed */
+            padding-top: 0.5rem; 
+            padding-bottom: 0.5rem; 
+            z-index: 10; 
+            color: #1f2937; /* slate-800 for light mode */
+        }
+        .dark .category-title-sticky {
+            color: #f1f5f9; /* slate-100 for dark mode */
+        }
+    </style>
+</head>
+<body class="bg-slate-200 dark:bg-slate-900">
+
+    <div id="app-container" class="min-h-screen">
+      <div id="app-screen" class="max-w-lg mx-auto min-h-screen shadow-xl flex flex-col">
+        <!-- Header with Search -->
+        <header id="main-header" class="header-gradient sticky top-0 z-30 pt-4 pb-2 px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between">
+               <div class="search-container relative flex-grow mr-2">
+                   <input type="text" id="search-bar" placeholder="Search..." class="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-full text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none transition shadow-sm text-slate-700 dark:text-slate-300 placeholder-slate-400 dark:placeholder-slate-500">
+                   <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+               </div>
+                <button id="theme-toggle" class="p-2 rounded-full hover:bg-slate-200 dark:hover:bg-slate-700 flex-shrink-0" aria-label="Toggle theme">
+                    <svg id="theme-icon-light" class="w-5 h-5 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path></svg>
+                    <svg id="theme-icon-dark" class="w-5 h-5 text-slate-300 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+                </button>
+            </div>
+        </header>
+        
+        <!-- Category Tabs -->
+        <div id="category-tabs-container" class="sticky z-20 category-tabs-bg backdrop-blur-md px-4 sm:px-6 lg:px-8 overflow-x-auto whitespace-nowrap shadow-sm">
+             <!-- This div will have its top value dynamically adjusted by JS -->
+            <div id="category-tabs" class="flex space-x-2 py-2">
+                <!-- Tabs will be dynamically inserted here -->
+            </div>
+        </div>
+
+        <!-- Main Content Area -->
+        <main id="main-content" class="flex-grow px-4 sm:px-6 lg:px-8 py-8">
+            <h1 class="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-slate-100 mb-6 sm:mb-8 text-center">Essential Clinical Tools</h1>
+            <div id="calculators-grid">
+                <!-- Categories and Calculator cards will be dynamically inserted here -->
+            </div>
+             <div id="no-results" class="text-center p-10 hidden">
+                <div class="text-6xl mb-4" aria-label="Smiling emoji">😊</div>
+                <p class="text-slate-500 dark:text-slate-400 mt-2">Not found</p>
+            </div>
+        </main>
+      </div>
+    </div>
+
+    <!-- Modal for Calculator Inputs -->
+    <div id="calculator-modal" class="fixed inset-0 bg-black bg-opacity-70 backdrop-blur-sm flex items-center justify-center p-4 z-50 hidden">
+        <div class="modal-content bg-white dark:bg-slate-800 w-full max-w-md rounded-2xl shadow-2xl transform transition-all max-h-[90vh] flex flex-col">
+            <div class="p-6 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center">
+                <h2 id="modal-title" class="text-xl sm:text-2xl font-bold text-slate-800 dark:text-slate-100">Calculator</h2>
+                <button id="modal-close-btn" class="p-2 rounded-full text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700" aria-label="Close modal">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+            <div class="p-6 space-y-4 overflow-y-auto">
+                <div id="modal-inputs" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+                <div class="flex items-center space-x-4 pt-2">
+                    <button id="modal-calculate-btn" class="w-full md:w-auto text-white bg-blue-600 hover:bg-blue-700 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center transition">Calculate</button>
+                    <button id="modal-clear-btn" class="w-full md:w-auto text-slate-700 dark:text-slate-300 bg-slate-200 dark:bg-slate-600 hover:bg-slate-300 dark:hover:bg-slate-500 focus:ring-4 focus:ring-slate-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center transition">Clear</button>
+                </div>
+                <div id="modal-result-card" class="bg-slate-100 dark:bg-slate-700 p-5 rounded-lg border border-slate-200 dark:border-slate-600 mt-6 hidden"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // --- DATA STRUCTURE FOR CALCULATORS ---
+            const calculators = {
+                "Foundational": {
+                    items: {
+                        "Medication Dosage": { inputs: [ { id: 'dose_desired', label: 'Desired Dose', unit: 'mg', placeholder: 'e.g., 500' }, { id: 'dose_on_hand', label: 'Dose on Hand', unit: 'mg', placeholder: 'e.g., 250' }, { id: 'dose_volume', label: 'Volume/Vehicle', unit: 'mL', placeholder: 'e.g., 5' }, ], calculate: (v) => { const des = Number(v.dose_desired) || 0; const hand = Number(v.dose_on_hand) || 0; const vol = Number(v.dose_volume) || 0; if (hand === 0 && des !==0) return { error: "Dose on Hand cannot be zero."}; const resultVal = hand === 0 ? 0 : (des / hand) * vol; return { result: `${resultVal.toFixed(2)}`, unit: 'mL', formula: 'X = (D / H) * V', breakdown: `X = (${des}mg / ${hand}mg) * ${vol}mL = ${resultVal.toFixed(2)}mL`, interpretation: { patientValue: `Calculated dose to administer: **${resultVal.toFixed(2)} mL**.` , normalRange: "N/A - Based on prescription.", context: 'Ensure the calculated dose is within safe parameters for the patient. Always double-check calculations for high-alert medications.'} }; }, keywords: 'med, dose, drug, foundational' },
+                        "IV Flow Rate (mL/hr)": { inputs: [ { id: 'iv_volume', label: 'Total Volume', unit: 'mL', placeholder: 'e.g., 1000' }, { id: 'iv_time_hr', label: 'Total Time', unit: 'hours', placeholder: 'e.g., 8' }, ], calculate: (v) => { const vol = Number(v.iv_volume) || 0; const time = Number(v.iv_time_hr) || 0; if (time === 0 && vol !== 0) return { error: "Total Time cannot be zero."}; const resultVal = time === 0 ? 0 : vol / time; return { result: `${resultVal.toFixed(2)}`, unit: 'mL/hr', formula: 'Rate = Total Volume / Total Time', breakdown: `Rate = ${vol} mL / ${time} hr = ${resultVal.toFixed(2)} mL/hr`, interpretation: { patientValue: `Calculated IV rate: **${resultVal.toFixed(2)} mL/hr**.` , normalRange: "N/A - Based on order.", context: 'Set infusion pump to this rate. Regularly monitor the IV site for signs of infiltration or phlebitis.'} }; }, keywords: 'drip, rate, infusion, foundational, iv' },
+                        "IV Flow Rate (gtt/min)": { inputs: [ { id: 'gtt_volume', label: 'Total Volume', unit: 'mL', placeholder: 'e.g., 1000' }, { id: 'gtt_time_min', label: 'Total Time', unit: 'minutes', placeholder: 'e.g., 480' }, { id: 'gtt_drop_factor', label: 'Drop Factor', unit: 'gtt/mL', placeholder: 'e.g., 15' }, ], calculate: (v) => { const vol = Number(v.gtt_volume) || 0; const time = Number(v.gtt_time_min) || 0; const factor = Number(v.gtt_drop_factor) || 0; if (time === 0 && vol !==0) return { error: "Total Time cannot be zero."}; const resultVal = time === 0 ? 0 : Math.round((vol * factor) / time); return { result: `${resultVal}`, unit: 'gtt/min', formula: 'Rate = (Volume * Drop Factor) / Time (min)', breakdown: `Rate = (${vol}mL * ${factor}gtt/mL) / ${time}min = ${resultVal} gtt/min`, interpretation: { patientValue: `Calculated IV rate: **${resultVal} gtt/min**.` , normalRange: "N/A - Based on order and drop factor.", context: 'Manually count drops for 15 seconds and multiply by 4 to confirm the rate. Ensure the drip chamber is not over-filled.'} }; }, keywords: 'gravity, drip, drops, foundational, iv' }
+                    }
+                },
+                "Adult Health": {
+                    items: {
+                        "Body Mass Index (BMI)": { inputs: [ { id: 'bmi_weight', label: 'Weight', unit: 'kg', placeholder: 'e.g., 70' }, { id: 'bmi_height', label: 'Height', unit: 'cm', placeholder: 'e.g., 175' }, ], calculate: (v) => { const weight = Number(v.bmi_weight) || 0; const heightCm = Number(v.bmi_height) || 0; if (heightCm === 0 && weight > 0) return { error: "Height cannot be zero if weight is entered."}; if (heightCm === 0) return { result: "0", unit: 'kg/m²', formula: 'BMI = weight(kg) / [height(m)]²', breakdown: `BMI = ${weight}kg / [(${heightCm}cm / 100)]² = 0 kg/m²`, interpretation: { patientValue: "Patient's BMI: **0 kg/m²**.", normalRange: "Underweight: <18.5\nNormal: 18.5-24.9\nOverweight: 25-29.9\nObesity: ≥30", context: 'Enter weight and height.' } }; const hM = heightCm / 100; const bmi = weight / (hM * hM); let cat = ''; let patientV = `Patient's BMI: **${bmi.toFixed(1)} kg/m²**.`; let normalR = "Underweight: <18.5 kg/m²\nNormal weight: 18.5-24.9 kg/m²\nOverweight: 25-29.9 kg/m²\nObesity: ≥30 kg/m²"; let contextText = ''; if (bmi < 18.5) { cat = 'Underweight'; contextText = `This is classified as **Underweight**. Consider nutritional assessment.`;} else if (bmi < 25) { cat = 'Normal weight'; contextText = `This is classified as **Normal weight**. Maintain healthy lifestyle.`;} else if (bmi < 30) { cat = 'Overweight'; contextText = `This is classified as **Overweight**. Consider lifestyle modifications.`;} else { cat = 'Obesity'; contextText = `This is classified as **Obesity**. Medical evaluation and management may be necessary.`;} return { result: `${bmi.toFixed(1)}`, unit: 'kg/m²', formula: 'BMI = weight(kg) / [height(m)]²', breakdown: `BMI = ${weight}kg / [(${heightCm}cm / 100)]² = ${weight}kg / [${hM.toFixed(2)}m]² = ${bmi.toFixed(1)} kg/m²`, visualization: { type: 'gauge', value: bmi, max: 40, ranges: [ { till: 18.5, color: 'bg-blue-400', label: 'Underweight' }, { till: 25, color: 'bg-green-500', label: 'Normal' }, { till: 30, color: 'bg-yellow-400', label: 'Overweight' }, { till: 40, color: 'bg-red-500', label: 'Obese' } ] }, interpretation: { patientValue: patientV, normalRange: normalR, context: `${contextText} BMI influences medication dosing, nutritional planning, and risk assessment.` } }; }, keywords: 'bmi, weight, height, adult health' },
+                        "Anion Gap": { inputs: [ { id: 'ag_na', label: 'Sodium (Na⁺)', unit: 'mEq/L', placeholder: 'e.g., 140' }, { id: 'ag_cl', label: 'Chloride (Cl⁻)', unit: 'mEq/L', placeholder: 'e.g., 100' }, { id: 'ag_hco3', label: 'Bicarbonate (HCO₃⁻)', unit: 'mEq/L', placeholder: 'e.g., 24' }, ], calculate: (v) => { const na = Number(v.ag_na) || 0; const cl = Number(v.ag_cl) || 0; const hco3 = Number(v.ag_hco3) || 0; const resultVal = na - (cl + hco3); let patientV = `Patient's Anion Gap: **${resultVal.toFixed(1)} mEq/L**.`; let normalR = "Normal range: 4-12 mEq/L (may vary by lab)."; let contextText = ''; if (resultVal > 12) contextText = 'This is a **High Anion Gap**. Suggests metabolic acidosis from causes like DKA, lactic acidosis, or salicylate toxicity. Consider further labs.'; else if (resultVal < 4 && (na !==0 || cl !== 0 || hco3 !== 0)) contextText = 'This is a **Low Anion Gap**. This is rare. Consider hypoalbuminemia, paraproteinemia, or lab error.'; else if (na === 0 && cl === 0 && hco3 === 0) contextText = 'Enter lab values to calculate Anion Gap.'; else contextText = 'This is a **Normal Anion Gap**. If acidosis is present, typically indicates non-anion gap metabolic acidosis, or normal acid-base balance.'; return { result: `${resultVal.toFixed(1)}`, unit: 'mEq/L', formula: 'Anion Gap = Na⁺ - (Cl⁻ + HCO₃⁻)', breakdown: `Gap = ${na}mEq/L - (${cl}mEq/L + ${hco3}mEq/L) = ${resultVal.toFixed(1)} mEq/L`, interpretation: {patientValue: patientV, normalRange: normalR, context: contextText} }; }, keywords: 'abg, acidosis, labs, metabolic, adult health' },
+                        "Creatinine Clearance (Cockcroft-Gault)": { inputs: [ { id: 'crcl_age', label: 'Age', unit: 'years', placeholder: 'e.g., 65' }, { id: 'crcl_weight', label: 'Weight', unit: 'kg', placeholder: 'e.g., 70' }, { id: 'crcl_creat', label: 'Serum Creatinine', unit: 'mg/dL', placeholder: 'e.g., 1.2' }, { id: 'crcl_gender', label: 'Gender', type: 'select', options: [{text: 'Male', value: 1}, {text: 'Female', value: 0.85}] } ], calculate: (v) => { const age = Number(v.crcl_age) || 0; const weight = Number(v.crcl_weight) || 0; const creat = Number(v.crcl_creat) || 0; const genderFactor = Number(v.crcl_gender) || 1; if (creat === 0 && (age > 0 || weight > 0) ) return { error: "Serum Creatinine cannot be zero if other values are entered."}; if (creat === 0) return { result: "0", unit: 'mL/min', formula: 'CrCl = [(140 - Age) * Weight(kg)] / [72 * SCr] (x 0.85 for female)', breakdown: `CrCl = [(140 - ${age}) * ${weight}kg] / [72 * ${creat}mg/dL] * ${genderFactor === 1 ? '1 (Male)' : '0.85 (Female)'} = 0 mL/min`, interpretation: { patientValue: "Est. CrCl: **0 mL/min**.", normalRange: "Normal CrCl (approx):\nMen: 97-137 mL/min\nWomen: 88-128 mL/min\nValues decrease with age.", context: "Enter all values."}}; const resultVal = (((140 - age) * weight) / (72 * creat)) * genderFactor; let patientV = `Patient's estimated CrCl: **${resultVal.toFixed(1)} mL/min**.`; let normalR = "Normal CrCl (approx):\nMen: 97-137 mL/min\nWomen: 88-128 mL/min\nValues decrease with age."; let contextText = ""; if (resultVal < 15) contextText = "Indicates Kidney Failure (Stage 5 CKD)."; else if (resultVal < 30) contextText = "Indicates Severe kidney damage (Stage 4 CKD)."; else if (resultVal < 60) contextText = "Indicates Moderate kidney damage (Stage 3 CKD)."; else if (resultVal < 90) contextText = "May indicate Mild kidney damage (Stage 2 CKD) if other signs of kidney damage are present."; else contextText = "Indicates Normal kidney function or Stage 1 CKD if other signs of kidney damage are present."; return { result: resultVal.toFixed(1), unit: 'mL/min', formula: 'CrCl = [(140 - Age) * Weight(kg)] / [72 * SCr] (x 0.85 for female)', breakdown: `CrCl = [(140 - ${age}) * ${weight}kg] / [72 * ${creat}mg/dL] * ${genderFactor === 1 ? '1 (Male)' : '0.85 (Female)'} = ${resultVal.toFixed(1)} mL/min`, interpretation: { patientValue: patientV, normalRange: normalR, context: `${contextText} This value is critical for adjusting dosages of renally-cleared medications.`} }; }, keywords: 'cockcroft-gault, kidney, renal, function, gfr, adult health' },
+                        "Smoking Pack-Years": { inputs: [ { id: 'pack_years_packs', label: 'Packs smoked per day', unit: 'packs', placeholder: 'e.g., 1.5' }, { id: 'pack_years_years', label: 'Years of smoking', unit: 'years', placeholder: 'e.g., 20' } ], calculate: (v) => { const packs = Number(v.pack_years_packs) || 0; const years = Number(v.pack_years_years) || 0; const resultVal = packs * years; let patientV = `Patient's smoking history: **${resultVal.toFixed(1)} pack-years**.`; let normalR = "Reference: 0 pack-years for non-smokers."; let contextText = `This value quantifies cumulative tobacco exposure. `; if (resultVal >= 30) contextText += `A value of ${resultVal.toFixed(1)} is a very heavy smoking history. Significantly increased risk for COPD, lung cancer, and cardiovascular disease. Strongly advise cessation and consider relevant screenings.`; else if (resultVal >= 20) contextText += `A value of ${resultVal.toFixed(1)} is a significant smoking history. Increased risk for related diseases. Discuss cessation and screening.`; else if (resultVal > 0) contextText += `Even lower pack-years indicate increased health risks. Cessation is always beneficial.`; else contextText += `No reported smoking history.`; return { result: resultVal.toFixed(1), unit: 'pack-years', formula: 'Pack-Years = (Packs per day) × (Years as a smoker)', breakdown: `Pack-Years = ${packs} packs/day × ${years} years = ${resultVal.toFixed(1)} pack-years`, interpretation: {patientValue: patientV, normalRange: normalR, context: contextText} }; }, keywords: 'smoking, pack, years, history, tobacco, lung, adult health' }
+                    }
+                },
+                "Pediatric": {
+                    items: {
+                        "Weight-Based Dosage": { inputs: [ { id: 'peds_dose', label: 'Prescribed Dose', unit: 'mg/kg/day', placeholder: 'e.g., 10' }, { id: 'peds_weight', label: 'Weight', unit: 'kg', placeholder: 'e.g., 15' }, { id: 'peds_doses_per_day', label: 'Doses per day', unit: '', placeholder: 'e.g., 3', type:'number' }, ], calculate: (v) => { const dosePerKg = Number(v.peds_dose) || 0; const weight = Number(v.peds_weight) || 0; let dosesPerDay = Number(v.peds_doses_per_day); if (isNaN(dosesPerDay) || dosesPerDay <= 0 ) { if (dosePerKg > 0 || weight > 0) return { error: "Doses per day must be a number greater than zero." }; dosesPerDay = 1; /* Default to 1 if not a factor and other inputs are 0 */ } const tdd = dosePerKg * weight; const sd = tdd / dosesPerDay; let patientV = `Calculated single dose: **${sd.toFixed(2)} mg**.`; let normalR = `Total daily dose: ${tdd.toFixed(2)} mg/day.`; let contextText = `For a child weighing ${weight}kg, with a prescribed dose of ${dosePerKg}mg/kg/day divided into ${dosesPerDay} doses. Pediatric dosing requires absolute accuracy. Always verify with a formulary or pharmacist.`; return { result: `${sd.toFixed(2)} mg`, unit: `(Total: ${tdd.toFixed(2)} mg/day)`, formula: 'Total Daily Dose (TDD) = Dose (mg/kg/day) * Weight (kg); Single Dose = TDD / Doses per day', breakdown: `TDD = ${dosePerKg}mg/kg/day * ${weight}kg = ${tdd.toFixed(2)} mg/day.\nSingle Dose = ${tdd.toFixed(2)}mg/day / ${dosesPerDay} doses = ${sd.toFixed(2)} mg`, interpretation: { patientValue: patientV, normalRange: normalR, context: contextText } }; }, keywords: 'child, infant, peds, medication, pediatric' }
+                    }
+                },
+                "Obstetric": {
+                    items: {
+                        "Naegele's Rule (EDD)": { inputs: [ { id: 'ob_lmp', label: 'First Day of Last Menstrual Period (LMP)', type: 'date' } ], calculate: (v) => { if(!v.ob_lmp) return { error: "LMP date is required."}; const lmpDate = new Date(v.ob_lmp + 'T00:00:00Z'); // Ensure UTC context for date part
+                                if (isNaN(lmpDate.getTime())) return { error: "Invalid LMP date provided."};
+                                const originalLMP = new Date(lmpDate); // Clone for display
+                                lmpDate.setDate(lmpDate.getDate() + 7);
+                                lmpDate.setMonth(lmpDate.getMonth() - 3);
+                                lmpDate.setFullYear(lmpDate.getFullYear() + 1);
+                                const eddStr = lmpDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+                                let patientV = `Estimated Due Date (EDD): **${eddStr}**.`;
+                                let normalR = `Based on LMP: ${originalLMP.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}`;
+                                let contextText = 'This estimate is based on a 28-day cycle. Confirm with ultrasound for higher accuracy, especially with irregular cycles.';
+                                return { result: eddStr, unit: 'Est. Due Date', formula: 'EDD = (LMP + 7 days) - 3 months + 1 year', breakdown: `LMP: ${originalLMP.toLocaleDateString('en-US', {month:'short', day:'numeric',year:'numeric'})}\nLMP + 7 days: ${new Date(new Date(originalLMP).setDate(originalLMP.getDate() + 7)).toLocaleDateString('en-US', {month:'short', day:'numeric',year:'numeric'})}\nEDD (LMP+7d-3m+1y): ${eddStr}`, interpretation: { patientValue: patientV, normalRange: normalR, context: contextText } }; }, keywords: 'edd, due date, pregnancy, lmp, obstetric' },
+                        "APGAR Score": { inputs: [ { id: 'apgar_appearance', label: 'Appearance (Color)', type: 'select', options: [{text: 'Blue, pale (0 pts)', value: 0}, {text: 'Body pink, extremities blue (1 pt)', value: 1}, {text: 'Completely pink (2 pts)', value: 2}] }, { id: 'apgar_pulse', label: 'Pulse (Heart Rate)', type: 'select', options: [{text: 'Absent (0 pts)', value: 0}, {text: '< 100 bpm (1 pt)', value: 1}, {text: '> 100 bpm (2 pts)', value: 2}] }, { id: 'apgar_grimace', label: 'Grimace (Reflex Irritability)', type: 'select', options: [{text: 'No response (0 pts)', value: 0}, {text: 'Grimace (1 pt)', value: 1}, {text: 'Cry, sneeze, cough (2 pts)', value: 2}] }, { id: 'apgar_activity', label: 'Activity (Muscle Tone)', type: 'select', options: [{text: 'Limp (0 pts)', value: 0}, {text: 'Some flexion (1 pt)', value: 1}, {text: 'Active motion (2 pts)', value: 2}] }, { id: 'apgar_respiration', label: 'Respiration (Breathing Effort)', type: 'select', options: [{text: 'Absent (0 pts)', value: 0}, {text: 'Slow, irregular, weak cry (1 pt)', value: 1}, {text: 'Good, strong cry (2 pts)', value: 2}] }, ], calculate: (v) => { const score = Object.values(v).reduce((s, val) => s + (parseInt(val, 10) || 0), 0); let patientV = `Newborn's APGAR Score: **${score}/10**.`; let normalR = "Score 7-10: Normal adaptation.\nScore 4-6: Moderately depressed.\nScore 0-3: Severely depressed."; let contextText = ''; if (score >= 7) contextText = 'Indicates good adaptation to extrauterine life.'; else if (score >= 4) { contextText = 'Indicates **Moderately depressed**. May require some resuscitation measures (e.g., stimulation, oxygen).';} else { contextText = 'Indicates **Severely depressed**. Immediate resuscitation is required.';} return { result: `${score}`, unit: '/ 10', formula: 'APGAR = Sum of scores for Appearance, Pulse, Grimace, Activity, and Respiration.', breakdown: `Score = A(${v.apgar_appearance}) + P(${v.apgar_pulse}) + G(${v.apgar_grimace}) + A(${v.apgar_activity}) + R(${v.apgar_respiration}) = ${score}`, visualization: { type: 'circle', value: score, max: 10, color: score >= 7 ? '#10B981' : (score >= 4 ? '#FBBF24' : '#F87171') }, interpretation: {patientValue: patientV, normalRange: normalR, context: contextText} }; }, keywords: 'newborn, birth, score, infant assessment, obstetric' }
+                    }
+                },
+                "Cardiology": {
+                    items: {
+                        "Corrected QT Interval (QTc - Bazett)": { inputs: [ { id: 'qtc_qt', label: 'QT Interval', unit: 'msec', placeholder: 'e.g., 400' }, { id: 'qtc_hr', label: 'Heart Rate', unit: 'bpm', placeholder: 'e.g., 60' } ], calculate: (v) => { const qtMsec = Number(v.qtc_qt) || 0; const hr = Number(v.qtc_hr) || 0; if (hr === 0 && qtMsec > 0) return { error: "Heart rate cannot be zero if QT interval is provided."}; if (hr === 0) return { result: "0", unit: 'msec', formula: 'QTc (Bazett) = QT (sec) / √RR (sec); RR = 60 / HR', breakdown: 'Enter QT interval and Heart Rate.', interpretation: { patientValue: "Calculated QTc: **0 msec**.", normalRange: "Normal QTc (approx. cutoffs):\nMen: ≤450 msec\nWomen: ≤460 msec\n\nProlonged QTc:\nMen: >450 msec\nWomen: >460 msec\n\nHigh risk for Torsades de Pointes: >500 msec", context: "Enter values." } }; const qtSec = qtMsec / 1000; const rrSec = 60 / hr; const qtc = qtSec / Math.sqrt(rrSec); const qtcMsec = qtc * 1000; let patientV = `Calculated QTc (Bazett): **${qtcMsec.toFixed(0)} msec**.`; let normalR = "Normal QTc (approx. cutoffs):\nMen: ≤450 msec\nWomen: ≤460 msec\n(Slight variations in exact cutoffs exist based on source)\n\nProlonged QTc:\nMen: >450 msec\nWomen: >460 msec\n\nHigh risk for Torsades de Pointes: >500 msec"; let contextText = `A QTc of **${qtcMsec.toFixed(0)} msec**. `; if (qtcMsec > 500) { contextText += "This is **markedly prolonged** and indicates a high risk of Torsades de Pointes. Urgent cardiology consult advised. Review medications for QT-prolonging agents."; } else if (qtcMsec > 470) { contextText += "This is **prolonged** for most individuals. It is considered prolonged for males (>450ms) and may be prolonged for females (>460-470ms depending on specific guideline). Increased risk of arrhythmias. Review contributing factors (meds, electrolytes)."; } else if (qtcMsec > 450) { contextText += "This may be **borderline or prolonged for males** (>450ms). It is generally **normal for females** (normal typically up to 460-470ms). Review specific cutoffs based on patient sex and clinical context."; } else { contextText += "This is generally within **normal limits** for both males (≤450ms) and females (≤460-470ms)."; } contextText += "\nBazett's formula can overcorrect at high heart rates and undercorrect at low heart rates. Consider other formulas (e.g., Fridericia, Hodges) in extreme HRs."; return { result: `${qtcMsec.toFixed(0)}`, unit: 'msec', formula: 'QTc (Bazett) = QT (sec) / √RR (sec);  RR (sec) = 60 / Heart Rate (bpm)', breakdown: `QT = ${qtMsec}msec = ${qtSec.toFixed(3)}sec\nRR = 60 / ${hr}bpm = ${rrSec.toFixed(3)}sec\nQTc = ${qtSec.toFixed(3)}sec / √${rrSec.toFixed(3)} (√${rrSec.toFixed(3)} = ${Math.sqrt(rrSec).toFixed(3)}) = ${qtc.toFixed(3)}sec = ${qtcMsec.toFixed(0)}msec`, interpretation: {patientValue: patientV, normalRange: normalR, context: contextText} }; }, keywords: 'qtc, corrected qt, bazett, ecg, ekg, cardiology, arrhythmia, heart' },
+                        "CHA₂DS₂-VASc Score": { inputs: [ { id: 'chads_c', label: 'Congestive Heart Failure', type: 'select', options: [{text: 'No (0 pts)', value: 0}, {text: 'Yes (+1 pt)', value: 1}]}, { id: 'chads_h', label: 'Hypertension', type: 'select', options: [{text: 'No (0 pts)', value: 0}, {text: 'Yes (+1 pt)', value: 1}]}, { id: 'chads_a2', label: 'Age ≥ 75 years', type: 'select', options: [{text: 'No (0 pts)', value: 0}, {text: 'Yes (+2 pts)', value: 2}]}, { id: 'chads_d', label: 'Diabetes Mellitus', type: 'select', options: [{text: 'No (0 pts)', value: 0}, {text: 'Yes (+1 pt)', value: 1}]}, { id: 'chads_s2', label: 'Prior Stroke/TIA/Thromboembolism', type: 'select', options: [{text: 'No (0 pts)', value: 0}, {text: 'Yes (+2 pts)', value: 2}]}, { id: 'chads_v', label: 'Vascular Disease (MI, PAD, Aortic Plaque)', type: 'select', options: [{text: 'No (0 pts)', value: 0}, {text: 'Yes (+1 pt)', value: 1}]}, { id: 'chads_a1', label: 'Age 65-74 years', type: 'select', options: [{text: 'No (0 pts)', value: 0}, {text: 'Yes (+1 pt)', value: 1}]}, { id: 'chads_sc', label: 'Sex Category Female', type: 'select', options: [{text: 'No (Male) (0 pts)', value: 0}, {text: 'Yes (Female) (+1 pt)', value: 1}]} ], calculate: (v) => { let score = 0; let breakdownPts = []; Object.keys(v).forEach(key => { const val = parseInt(v[key], 10) || 0; score += val; if (val > 0) breakdownPts.push(`${key.replace('chads_', '').toUpperCase()}: +${val}pt`); }); let patientV = `Patient's CHA₂DS₂-VASc Score: **${score} point(s)**.`; let normalR = "Score range: 0-9 points."; let contextText = "Used to estimate annual stroke risk in non-valvular AFib patients to guide anticoagulation decisions.\n"; if (score === 0) contextText += `**Score 0 (Males) / 1 (Females if sex is the ONLY risk factor):** Very Low Risk. Consider no antithrombotic therapy. (Annual stroke risk ~0-1.3%)`; else if (score === 1 && parseInt(v.chads_sc, 10) === 1 && breakdownPts.length === 1 && breakdownPts[0].includes("SC")) contextText += `**Score 1 (Females, sex as only risk factor):** Very Low Risk. Consider no antithrombotic therapy. (Annual stroke risk ~1.3%)`; else if (score === 1) contextText += `**Score 1 (typically Males):** Low-Moderate Risk. Consider oral anticoagulant or aspirin. (Annual stroke risk ~1.3-2.2%)`; else contextText += `**Score ≥2:** Moderate-High Risk. Oral anticoagulant recommended. (Annual stroke risk increases from ~2.2% at score 2, up to ~15.2% at score 9)`; return { result: `${score}`, unit: 'points', formula: 'Sum of points for C, H, A₂, D, S₂, V, A, Sc criteria.', breakdown: `Points = ${breakdownPts.join(', ') || 'None'} = ${score}`, visualization: { type: 'circle', value: score, max: 9, color: score >=3 ? '#F87171' : (score >=1 ? '#FBBF24' : '#10B981') }, interpretation: {patientValue: patientV, normalRange: normalR, context: contextText} }; }, keywords: 'chads vasc, cha2ds2vasc, afib, atrial fibrillation, stroke risk, anticoagulation, cardiology' },
+                        "ASCVD Risk Score (10-year)": { inputs: [ { id: 'ascvd_age', label: 'Age', unit: 'years', placeholder: 'e.g., 55 (40-79)' }, { id: 'ascvd_sex', label: 'Sex', type: 'select', options: [{text: 'Male', value: 'male'}, {text: 'Female', value: 'female'}] }, { id: 'ascvd_race', label: 'Race', type: 'select', options: [{text: 'White/Other', value: 'white'}, {text: 'African American', value: 'aa'}] }, { id: 'ascvd_tc', label: 'Total Cholesterol', unit: 'mg/dL', placeholder: 'e.g., 210' }, { id: 'ascvd_hdl', label: 'HDL Cholesterol', unit: 'mg/dL', placeholder: 'e.g., 50' }, { id: 'ascvd_sbp', label: 'Systolic Blood Pressure', unit: 'mmHg', placeholder: 'e.g., 130' }, { id: 'ascvd_bp_treated', label: 'On BP Treatment?', type: 'select', options: [{text: 'No', value: 0}, {text: 'Yes', value: 1}] }, { id: 'ascvd_diabetes', label: 'Diabetes?', type: 'select', options: [{text: 'No', value: 0}, {text: 'Yes', value: 1}] }, { id: 'ascvd_smoker', label: 'Smoker?', type: 'select', options: [{text: 'Never', value: 0}, {text: 'Former', value: 1}, {text: 'Current', value: 2}]} ], calculate: (v) => { const age = Number(v.ascvd_age) || 0; if(age !== 0 && (age < 40 || age > 79)) return { error: "ASCVD Pooled Cohort Equations are validated for ages 40-79."}; const riskFactors = []; if(Number(v.ascvd_tc) > 0) riskFactors.push(`TC: ${v.ascvd_tc}`); if(Number(v.ascvd_hdl) > 0) riskFactors.push(`HDL: ${v.ascvd_hdl}`); if(Number(v.ascvd_sbp) > 0) riskFactors.push(`SBP: ${v.ascvd_sbp}`); if(parseInt(v.ascvd_bp_treated,10)) riskFactors.push("BP Treated"); if(parseInt(v.ascvd_diabetes,10)) riskFactors.push("Diabetes"); if(parseInt(v.ascvd_smoker,10) === 2) riskFactors.push("Current Smoker"); else if(parseInt(v.ascvd_smoker,10) === 1) riskFactors.push("Former Smoker"); let patientV = "Patient's 10-year ASCVD Risk: **Calculation Complex**. Please use official ACC/AHA tool."; let normalR = "Risk Categories:\n<5%: Low risk\n5% to <7.5%: Borderline risk\n7.5% to <20%: Intermediate risk\n≥20%: High risk"; let contextText = `This score estimates the 10-year risk of a first ASCVD event (heart attack, stroke). Input values: Age ${age || 'N/A'}, Sex ${v.ascvd_sex}, Race ${v.ascvd_race}, ${riskFactors.join(', ') || 'No other factors entered'}. The actual calculation involves complex logarithmic equations and interaction terms based on sex and race. **This tool provides input fields but does NOT calculate the official score. Use a validated ACC/AHA online calculator for clinical decision-making.**`; return { result: "See Interpretation", unit: '%', formula: 'Based on ACC/AHA Pooled Cohort Equations (complex algorithm).', breakdown: 'Full calculation not performed by this tool. Refer to official calculators.', interpretation: {patientValue: patientV, normalRange: normalR, context: contextText} }; }, keywords: 'ascvd, cardiovascular risk, heart attack, stroke, cholesterol, primary prevention, cardiology' }
+                    }
+                },
+                "Critical Care": {
+                    items: {
+                        "Mean Arterial Pressure (MAP)": { inputs: [ { id: 'map_sbp', label: 'Systolic BP (SBP)', unit: 'mmHg', placeholder: 'e.g., 120' }, { id: 'map_dbp', label: 'Diastolic BP (DBP)', unit: 'mmHg', placeholder: 'e.g., 80' }, ], calculate: (v) => { const sbp = Number(v.map_sbp) || 0; const dbp = Number(v.map_dbp) || 0; if (sbp < dbp && sbp !== 0 && dbp !==0) return { error: 'SBP must be greater than or equal to DBP.' }; const map = (sbp + 2 * dbp) / 3; let patientV = `Patient's MAP: **${map.toFixed(1)} mmHg**.`; let normalR = "Target range: Typically 65-110 mmHg (varies by clinical context). Critical care target often >65 mmHg for organ perfusion."; let contextText = ''; if (map < 65 && map !==0 && (sbp !== 0 || dbp !== 0)) contextText = `This is **low** (<65 mmHg). Risk of inadequate perfusion to vital organs. Report finding and consider interventions.`; else if (map > 110) contextText = `This is **high** (>110 mmHg). May indicate hypertension or other conditions requiring management.`; else if (map >= 65 && map <= 110) contextText = `This is within a typical target range for adequate organ perfusion.`; else contextText = 'Enter SBP and DBP to calculate MAP.'; return { result: `${map.toFixed(1)}`, unit: 'mmHg', formula: 'MAP = (SBP + 2*DBP) / 3', breakdown: `MAP = (${sbp}mmHg + 2 * ${dbp}mmHg) / 3 = ${map.toFixed(1)} mmHg`, interpretation: {patientValue: patientV, normalRange: normalR, context: contextText} }; }, keywords: 'map, bp, blood pressure, perfusion, icu, critical care' },
+                        "Glasgow Coma Scale (GCS)": { inputs: [ { id: 'gcs_eye', label: 'Eye Opening Response', type: 'select', options: [{text:'Spontaneous (4 pts)', value: 4}, {text:'To speech (3 pts)', value: 3}, {text:'To pain (2 pts)', value: 2}, {text:'No response (1 pt)', value: 1}] }, { id: 'gcs_verbal', label: 'Verbal Response', type: 'select', options: [{text:'Oriented (5 pts)', value: 5}, {text:'Confused (4 pts)', value: 4}, {text:'Inappropriate words (3 pts)', value: 3}, {text:'Incomprehensible sounds (2 pts)', value: 2}, {text:'No response (1 pt)', value: 1}] }, { id: 'gcs_motor', label: 'Motor Response', type: 'select', options: [{text:'Obeys commands (6 pts)', value: 6}, {text:'Moves to localized pain (5 pts)', value: 5}, {text:'Flexion withdrawal from pain (4 pts)', value: 4}, {text:'Abnormal flexion (decorticate) (3 pts)', value: 3}, {text:'Abnormal extension (decerebrate) (2 pts)', value: 2}, {text:'No response (1 pt)', value: 1}] }, ], calculate: (v) => { const eye = parseInt(v.gcs_eye, 10); const verbal = parseInt(v.gcs_verbal, 10); const motor = parseInt(v.gcs_motor, 10); if(isNaN(eye) || eye === 0) return { error: "Please select Eye Opening Response."}; if(isNaN(verbal) || verbal === 0) return { error: "Please select Verbal Response."}; if(isNaN(motor) || motor === 0) return { error: "Please select Motor Response."}; const score = eye + verbal + motor; let patientV = `Patient's GCS: **${score}/15**.`; let normalR = "Max score: 15 (fully awake)\nMin score: 3 (deep coma)\nSevere Head Injury: ≤8\nModerate Head Injury: 9-12\nMild Head Injury: 13-15"; let contextText = ''; if (score >= 13) contextText = 'Classification: **Mild Head Injury** (GCS 13-15).'; else if (score >= 9) contextText = 'Classification: **Moderate Head Injury** (GCS 9-12). Neurological monitoring is critical.'; else contextText = 'Classification: **Severe Head Injury** (GCS ≤8). Requires immediate intervention, consider intubation if GCS ≤ 8.'; return { result: `${score}`, unit: '/ 15', formula: 'GCS = Eye Response + Verbal Response + Motor Response', breakdown: `GCS = E(${eye}) + V(${verbal}) + M(${motor}) = ${score}`, visualization: { type: 'circle', value: score, max: 15, color: score >= 13 ? '#10B981' : (score >= 9 ? '#FBBF24' : '#F87171') }, interpretation: {patientValue: patientV, normalRange: normalR, context: contextText} }; }, keywords: 'gcs, coma, neuro, consciousness, head injury, critical care, neurology' },
+                        "Parkland Formula (Burn Fluid)": { inputs: [ { id: 'park_weight', label: 'Weight', unit: 'kg', placeholder: 'e.g., 75' }, { id: 'park_tbsa', label: 'Total Body Surface Area (TBSA) Burned', unit: '%', placeholder: 'e.g., 30' }, ], calculate: (v) => { const weight = Number(v.park_weight) || 0; const tbsa = Number(v.park_tbsa) || 0; const totalFluid = 4 * weight * tbsa; const first8hVol = totalFluid / 2; const next16hVol = totalFluid / 2; const rate8h = first8hVol > 0 && weight > 0 && tbsa > 0 ? first8hVol / 8 : 0; const rate16h = next16hVol > 0 && weight > 0 && tbsa > 0 ? next16hVol / 16 : 0; let patientV = `Total fluid in 24h: **${totalFluid.toFixed(0)} mL**.`; let normalR = `First 8h: ${first8hVol.toFixed(0)} mL (at ${rate8h.toFixed(0)} mL/hr).\nNext 16h: ${next16hVol.toFixed(0)} mL (at ${rate16h.toFixed(0)} mL/hr).`; let contextText = `For a ${weight}kg patient with ${tbsa}% TBSA burns. Administer half in the first 8 hours post-burn, and the remaining half over the next 16 hours. Use crystalloids (e.g., Lactated Ringer's). Titrate to urine output (target 0.5-1 mL/kg/hr adults).`; if (weight === 0 || tbsa === 0) { patientV = `Total fluid in 24h: **0 mL**.`; normalR = "Enter weight and TBSA for detailed rates."; contextText = "Enter patient weight and %TBSA burned."} return { result: `${totalFluid.toFixed(0)} mL / 24h`, unit: ``, formula: 'Total Fluid (mL) = 4mL * Weight(kg) * %TBSA', breakdown: `Total Fluid = 4mL * ${weight}kg * ${tbsa}% = ${totalFluid.toFixed(0)}mL.\nFirst 8h: ${first8hVol.toFixed(0)} mL (Rate: ${rate8h.toFixed(0)} mL/hr).\nNext 16h: ${next16hVol.toFixed(0)} mL (Rate: ${rate16h.toFixed(0)} mL/hr).`, interpretation: {patientValue: patientV, normalRange: normalR, context: contextText} }; }, keywords: 'burns, fluid, baxter, resuscitation, tbsa, critical care' },
+                        "PaO₂/FiO₂ Ratio (P/F Ratio)": { inputs: [ { id: 'pf_pao2', label: 'PaO₂ (from ABG)', unit: 'mmHg', placeholder: 'e.g., 90' }, { id: 'pf_fio2', label: 'FiO₂ (as percentage, e.g., 40 for 40%)', unit: '%', placeholder: 'e.g., 40' }, ], calculate: (v) => { const pao2 = Number(v.pf_pao2) || 0; const fio2Input = Number(v.pf_fio2) || 0; if (fio2Input !== 0 && (fio2Input <= 0 || fio2Input > 100)) return { error: "FiO₂ must be between >0% and 100%."}; if (fio2Input === 0 && pao2 > 0) return { error: "FiO₂ cannot be zero if PaO₂ is entered."}; if (fio2Input === 0 && pao2 === 0 ) { return { result: "N/A", unit: '', formula: 'P/F Ratio = PaO₂ (mmHg) / FiO₂ (as decimal)', breakdown: 'Enter PaO2 and FiO2 values.', interpretation: {patientValue: "P/F Ratio: **N/A**.", normalRange: "Normal: >400.\nALI/Mild ARDS: ≤300\nModerate ARDS: ≤200\nSevere ARDS: ≤100", context: 'Enter PaO2 and FiO2 values to calculate P/F Ratio.'}}; } const fio2Decimal = fio2Input / 100; const ratio = fio2Decimal === 0 ? 0 : pao2 / fio2Decimal; let patientV = `Patient's P/F Ratio: **${ratio.toFixed(0)}**.`; let normalR = "Normal: >400\nALI/Mild ARDS: ≤300\nModerate ARDS: ≤200\nSevere ARDS: ≤100"; let contextText = ''; if (ratio === 0 && (pao2 !==0 || fio2Input !==0)) { patientV = `Patient's P/F Ratio: **0**.`; contextText = 'Result is 0, check inputs. FiO2 decimal cannot be 0 if PaO2 is non-zero.'; } else if (ratio <= 100 && ratio !== 0) contextText = 'Indicates **Severe ARDS / Severe Hypoxemia.**'; else if (ratio <= 200) contextText = 'Indicates **Moderate ARDS / Moderate Hypoxemia.**'; else if (ratio <= 300) contextText = 'Indicates **Mild ARDS / Acute Lung Injury (ALI).**'; else if (ratio > 300) contextText = 'Indicates adequate oxygenation or no significant ARDS.'; else { contextText = 'Enter PaO2 and FiO2 to calculate P/F Ratio.';} return { result: ratio.toFixed(0), unit: '', formula: 'P/F Ratio = PaO₂ (mmHg) / FiO₂ (as decimal)', breakdown: `P/F Ratio = ${pao2}mmHg / (${fio2Input}% / 100) = ${pao2}mmHg / ${fio2Decimal.toFixed(2)} = ${ratio.toFixed(0)}`, interpretation: {patientValue: patientV, normalRange: normalR, context: `${contextText} Key indicator of hypoxemia severity and ARDS classification.`} }; }, keywords: 'ards, ventilator, abg, oxygenation, hypoxemia, lung injury, pf ratio, critical care, pulmonology' },
+                        "CURB-65 Score": { inputs: [ { id: 'curb_confusion', label: 'Confusion (new)', type: 'select', options: [{text: 'No (0 pts)', value: 0}, {text: 'Yes (1 pt)', value: 1}] }, { id: 'curb_bun', label: 'BUN', unit: 'mg/dL', placeholder: 'e.g., 25' }, { id: 'curb_rr', label: 'Respiratory Rate', unit: 'breaths/min', placeholder: 'e.g., 32' }, { id: 'curb_sbp', label: 'Systolic BP', unit: 'mmHg', placeholder: 'e.g., 85' }, { id: 'curb_dbp', label: 'Diastolic BP', unit: 'mmHg', placeholder: 'e.g., 55' }, { id: 'curb_age', label: 'Age', unit: 'years', placeholder: 'e.g., 70' } ], calculate: (v) => { let score = 0; let breakdownPts = []; score += (parseInt(v.curb_confusion, 10) || 0); breakdownPts.push(`Confusion: ${parseInt(v.curb_confusion,10) || 0}pt`); const bun = Number(v.curb_bun) || 0; if (bun > 19) { score++; breakdownPts.push(`BUN >19mg/dL (${bun}) (+1)`); } else { breakdownPts.push(`BUN ≤19mg/dL (${bun}) (+0)`); } const rr = Number(v.curb_rr) || 0; if (rr >= 30) { score++; breakdownPts.push(`RR ≥30 (${rr}) (+1)`); } else { breakdownPts.push(`RR <30 (${rr}) (+0)`); } const sbp = Number(v.curb_sbp) || 0; const dbp = Number(v.curb_dbp) || 0; if ((sbp !== 0 || dbp !== 0) && (sbp < 90 || dbp <= 60)) { score++; breakdownPts.push(`BP <90 SBP or ≤60 DBP (${sbp}/${dbp}) (+1)`); } else { breakdownPts.push(`BP normal or not fully entered (${sbp}/${dbp}) (+0)`); } const age = Number(v.curb_age) || 0; if (age >= 65) { score++; breakdownPts.push(`Age ≥65 (${age}) (+1)`); } else { breakdownPts.push(`Age <65 (${age}) (+0)`); } let patientV = `Patient's CURB-65 Score: **${score} point(s)**.`; let normalR = "Score 0-1: Low risk (outpatient)\nScore 2: Moderate risk (hospitalize)\nScore ≥3: High risk (urgent hospitalize, ?ICU)"; let contextText = ""; if (score <= 1) contextText = "Risk Group: **Low (Score 0-1)**. Consider outpatient treatment. 30-day mortality approx. 0.6-2.7%."; else if (score === 2) contextText = "Risk Group: **Moderate (Score 2)**. Consider hospital admission. 30-day mortality approx. 6.8%."; else contextText = `Risk Group: **High (Score ${score})**. Requires urgent hospital admission; consider ICU if score 4-5. 30-day mortality approx. 14.0% (score 3) to 27.8% (score 4-5).`; return { result: `${score}`, unit: 'points', formula: 'CURB-65: C(1), U(>19mg/dL)(1), R(≥30)(1), B(<90 SBP or ≤60 DBP)(1), Age(≥65)(1)', breakdown: breakdownPts.join('\n'), interpretation: {patientValue: patientV, normalRange: normalR, context: contextText} }; }, keywords: 'curb65, pneumonia, cap, severity, admission, respiratory, critical care, pulmonology' },
+                        "PERC Rule (Pulmonary Embolism Rule-out)": { inputs: [ {id: 'perc_age_crit', label: 'Age < 50 years?', type: 'select', options: [{text: 'Yes (Criteria MET, 0 pts)', value: 0}, {text: 'No (Criteria NOT met, +1 PE risk factor)', value: 1}]}, {id: 'perc_hr_crit', label: 'Heart rate < 100 bpm?', type: 'select', options: [{text: 'Yes (Criteria MET, 0 pts)', value: 0}, {text: 'No (Criteria NOT met, +1 PE risk factor)', value: 1}]}, {id: 'perc_o2_crit', label: 'O₂ Sat on room air ≥ 95%?', type: 'select', options: [{text: 'Yes (Criteria MET, 0 pts)', value: 0}, {text: 'No (Criteria NOT met, +1 PE risk factor)', value: 1}]}, {id: 'perc_prior_vte_crit', label: 'No prior VTE history?', type: 'select', options: [{text: 'Yes (Criteria MET, 0 pts)', value: 0}, {text: 'No (Criteria NOT met, +1 PE risk factor)', value: 1}]}, {id: 'perc_surgery_trauma_crit', label: 'No recent surgery/trauma (last 4 wks)?', type: 'select', options: [{text: 'Yes (Criteria MET, 0 pts)', value: 0}, {text: 'No (Criteria NOT met, +1 PE risk factor)', value: 1}]}, {id: 'perc_hemoptysis_crit', label: 'No hemoptysis?', type: 'select', options: [{text: 'Yes (Criteria MET, 0 pts)', value: 0}, {text: 'No (Criteria NOT met, +1 PE risk factor)', value: 1}]}, {id: 'perc_estrogen_crit', label: 'No exogenous estrogen use?', type: 'select', options: [{text: 'Yes (Criteria MET, 0 pts)', value: 0}, {text: 'No (Criteria NOT met, +1 PE risk factor)', value: 1}]}, {id: 'perc_leg_swelling_crit', label: 'No unilateral leg swelling?', type: 'select', options: [{text: 'Yes (Criteria MET, 0 pts)', value: 0}, {text: 'No (Criteria NOT met, +1 PE risk factor)', value: 1}]} ], calculate: (v) => { let riskFactors = 0; let criteriaNotMetText = []; Object.keys(v).forEach(key => { const val = parseInt(v[key], 10) || 0; riskFactors += val; if (val > 0) { const labelElement = document.querySelector(`label[for="${key}"]`); if(labelElement) criteriaNotMetText.push(labelElement.textContent.replace('?', 'is NO')); else criteriaNotMetText.push(key.replace('perc_','').replace('_crit','') + ' criterion not met'); } }); let patientV = `PERC Rule: **${riskFactors === 0 ? "PE Unlikely (0 risk factors)" : `${riskFactors} PE risk factor(s) present`}**.`; let normalR = "0 risk factors: PE unlikely (further testing like D-dimer may be unnecessary if pre-test probability is low).\n>0 risk factors: PERC rule cannot be used to rule out PE; further investigation warranted."; let contextText; if (riskFactors === 0) { contextText = "All 8 PERC criteria are met. In a low-risk patient (clinical gestalt), the probability of PE is very low (<2%), and further diagnostic testing for PE may not be required."; } else { contextText = `The PERC rule is **positive** (${riskFactors} risk factor(s)). The following criteria were NOT met (indicate increased PE likelihood):\n- ${criteriaNotMetText.join('\n- ')}\nThis rule cannot be used to rule out PE. Further investigation (e.g., D-dimer, Wells score, imaging) is typically warranted based on overall clinical assessment.`; } return { result: riskFactors === 0 ? "PE Unlikely" : "PE Possible", unit: `(${riskFactors} factor(s))`, formula: '8 criteria set. If all "No" to risk questions (all criteria met), PE is unlikely in low pre-test probability patients.', breakdown: riskFactors === 0 ? 'All 8 criteria met (0 risk factors).' : `${riskFactors} risk factor(s) present:\n${criteriaNotMetText.join('\n')}`, interpretation: {patientValue: patientV, normalRange: normalR, context: contextText} }; }, keywords: 'perc, pulmonary embolism, pe, rule out, vte, d-dimer, critical care, pulmonology, emergency' },
+                        "SIRS Criteria (Systemic Inflammatory Response Syndrome)": { inputs: [ { id: 'sirs_temp_c', label: 'Temperature', unit: '°C', placeholder: 'e.g., 38.5' }, { id: 'sirs_hr', label: 'Heart Rate', unit: 'bpm', placeholder: 'e.g., 95' }, { id: 'sirs_rr', label: 'Respiratory Rate', unit: 'breaths/min', placeholder: 'e.g., 22' }, { id: 'sirs_wbc', label: 'WBC Count', unit: 'x10³_μL', placeholder: 'e.g., 13.5 (for 13,500)' }, { id: 'sirs_bands', label: '>10% Bands (optional)', type: 'select', options: [{text:'No / Not applicable', value:0}, {text:'Yes', value:1}]} ], calculate: (v) => { let score = 0; let criteriaMet = []; const tempC = parseFloat(v.sirs_temp_c); const hr = parseInt(v.sirs_hr, 10) || 0; const rr = parseInt(v.sirs_rr, 10) || 0; const wbc = parseFloat(v.sirs_wbc); const bands = parseInt(v.sirs_bands, 10) || 0; if (!isNaN(tempC) && (tempC < 36 || tempC > 38)) { score++; criteriaMet.push(`Temp <36°C or >38°C (is ${tempC}°C)`); } if (hr > 90) { score++; criteriaMet.push(`HR >90 bpm (is ${hr}bpm)`); } if (rr > 20) { score++; criteriaMet.push(`RR >20 breaths/min (is ${rr}breaths/min)`); } /* PaCO2 <32mmHg is an alternative for RR, not easily input here. */ if (!isNaN(wbc) && (wbc < 4 || wbc > 12)) { score++; criteriaMet.push(`WBC <4 or >12 x10³/μL (is ${wbc}x10³/μL)`); } else if (bands === 1 && criteriaMet.filter(c => c.includes("WBC")).length === 0 ) { score++; criteriaMet.push(`>10% immature (band) forms`); } let patientV = `SIRS Criteria Met: **${score >= 2 ? 'Yes' : 'No'}** (${score} criteria).`; let normalR = "SIRS positive if ≥2 criteria are met."; let contextText = `Patient meets ${score} of 4 SIRS criteria.\n${criteriaMet.join('\n')}\n`; if (score >= 2) contextText += "Patient is SIRS positive. This indicates a systemic inflammatory response. If infection is suspected, this constitutes sepsis (per Sepsis-2 definitions). Consider causes (infection, trauma, pancreatitis, etc.)."; else contextText += "Patient does not currently meet SIRS criteria. Note: SIRS criteria have limitations and have been evolved in newer sepsis definitions (e.g., qSOFA, SOFA)."; return { result: `${score >= 2 ? 'SIRS Positive' : 'SIRS Negative'}`, unit: `(${score} criteria)`, formula: '≥2 of: Temp <36/>38°C; HR >90; RR >20 (or PaCO2 <32); WBC <4/>12 or >10% bands.', breakdown: `Criteria Met:\n${criteriaMet.join('\n') || 'None'}`, interpretation: {patientValue: patientV, normalRange: normalR, context: contextText} }; }, keywords: 'sirs, sepsis, infection, inflammation, critical care, systemic inflammatory response syndrome' },
+                        "APACHE II Score": { inputs: [ {id:'apache_temp', label:'Temperature (Rectal)', unit:'°C', placeholder:'e.g., 36.1'}, {id:'apache_map', label:'MAP', unit:'mmHg', placeholder:'e.g., 55'}, {id:'apache_hr', label:'Heart Rate', unit:'bpm', placeholder:'e.g., 120'}, {id:'apache_rr', label:'Respiratory Rate', unit:'breaths/min', placeholder:'e.g., 30'}, {id:'apache_pao2', label:'PaO2 (if FiO2 <0.5)', unit:'mmHg', placeholder:'e.g., 65'}, {id:'apache_ph', label:'Arterial pH', unit:'', placeholder:'e.g., 7.25'}, {id:'apache_serum_na', label:'Serum Sodium', unit:'mEq/L', placeholder:'e.g., 150'}, {id:'apache_serum_k', label:'Serum Potassium', unit:'mEq/L', placeholder:'e.g., 3.0'}, {id:'apache_creat', label:'Serum Creatinine (mg/dL)', unit:'mg/dL', placeholder:'e.g., 2.5'}, {id:'apache_arf', label:'Acute Renal Failure?', type:'select', options:[{text:'No',value:0},{text:'Yes',value:1}]}, {id:'apache_hct', label:'Hematocrit', unit:'%', placeholder:'e.g., 28'}, {id:'apache_wbc', label:'WBC Count (x1000)', unit:'/mm3', placeholder:'e.g., 22.5'}, {id:'apache_gcs', label:'Glasgow Coma Score', unit:'total', placeholder:'e.g., 9'}, {id:'apache_age', label:'Age Points', type:'select', options:[{text:'≤44 (0)',value:0},{text:'45-54 (2)',value:2},{text:'55-64 (3)',value:3},{text:'65-74 (5)',value:5},{text:'≥75 (6)',value:6}]}, {id:'apache_chronic', label:'Chronic Health Points', type:'select', options:[{text:'None (0)',value:0},{text:'Non-operative/Emergency Post-op (5)',value:5},{text:'Elective Post-op (2)',value:2}]} ], calculate: (v) => { return { result: "Complex", unit: "score", formula: "APACHE II: Sum of 12 physiological variables, age, and chronic health points.", breakdown: "Calculation not performed by this tool. Requires specific point scoring for worst values in 24h. Use validated APACHE II calculator.", interpretation: { patientValue: "APACHE II Score: **Complex Calculation**.", normalRange: "Score range: 0-71. Higher score correlates with higher ICU mortality risk.", context: "APACHE II is a severity-of-disease classification system for ICU patients. Inputs shown are examples. **Full calculation requires a dedicated tool due to complex point assignments for ranges of physiological variables, age, and chronic health status.**" } }; }, keywords: 'apache ii, icu, critical care, mortality, severity score' },
+                        "SOFA Score (Sequential Organ Failure Assessment)": { inputs: [ {id:'sofa_pao2fio2', label:'PaO2/FiO2 Ratio', unit:'', placeholder:'e.g., 150'}, {id:'sofa_platelets', label:'Platelets', unit:'x10³/μL', placeholder:'e.g., 80'}, {id:'sofa_bilirubin', label:'Bilirubin', unit:'mg/dL', placeholder:'e.g., 2.5'}, {id:'sofa_map_vaso', label:'MAP / Vasopressors', type:'select', options:[{text:'MAP ≥70 (0)',value:0},{text:'MAP <70 (1)',value:1},{text:'Dopamine ≤5 or Dobutamine (any dose) (2)',value:2},{text:'Dopamine >5 or Epi/NE ≤0.1 (3)',value:3},{text:'Dopamine >15 or Epi/NE >0.1 (4)',value:4}]}, {id:'sofa_gcs', label:'GCS', unit:'', placeholder:'e.g., 10'}, {id:'sofa_creatinine_urine', label:'Creatinine (mg/dL) or Urine Output', unit:'', placeholder:'e.g., 2.1 (Cr) or <500mL/day'} ], calculate: (v) => { return { result: "Complex", unit: "score", formula: "SOFA: Sum of scores (0-4) for 6 organ systems (Respiration, Coagulation, Liver, Cardiovascular, CNS, Renal).", breakdown: "Calculation not performed by this tool. Requires specific point scoring based on organ dysfunction. Use validated SOFA calculator.", interpretation: { patientValue: "SOFA Score: **Complex Calculation**.", normalRange: "Score range: 0-24. Higher or rising score indicates more severe organ dysfunction and increased mortality risk.", context: "SOFA score tracks organ dysfunction in ICU patients. Inputs shown are examples. **Full calculation requires mapping specific lab/clinical values to points (0-4) for each of the 6 organ systems. Use a dedicated tool.**" } }; }, keywords: 'sofa, sequential organ failure assessment, icu, critical care, organ dysfunction, sepsis' }
+                    }
+                },
+                "Neurology": {
+                    items: {
+                        "ABCD² Score for TIA": { inputs: [ { id: 'abcd2_age', label: 'Age ≥ 60 years', type: 'select', options: [{text: 'No (0 pts)', value: 0}, {text: 'Yes (+1 pt)', value: 1}] }, { id: 'abcd2_bp', label: 'Blood Pressure ≥ 140/90 mmHg at eval', type: 'select', options: [{text: 'No (0 pts)', value: 0}, {text: 'Yes (+1 pt)', value: 1}] }, { id: 'abcd2_clinical_weakness', label: 'Clinical: Unilateral Weakness', type: 'select', options: [{text: 'No (0 pts)', value: 0}, {text: 'Yes (+2 pts)', value: 2}] }, { id: 'abcd2_clinical_speech', label: 'Clinical: Speech Impairment (no weakness)', type: 'select', options: [{text: 'No (0 pts)', value: 0}, {text: 'Yes (+1 pt)', value: 1}] }, { id: 'abcd2_duration_long', label: 'Duration ≥ 60 minutes', type: 'select', options: [{text: 'No (0 pts)', value: 0}, {text: 'Yes (+2 pts)', value: 2}] }, { id: 'abcd2_duration_short', label: 'Duration 10-59 minutes', type: 'select', options: [{text: 'No (0 pts)', value: 0}, {text: 'Yes (+1 pt)', value: 1}] }, { id: 'abcd2_diabetes', label: 'Diabetes', type: 'select', options: [{text: 'No (0 pts)', value: 0}, {text: 'Yes (+1 pt)', value: 1}] } ], calculate: (v) => { let score = 0; let breakdownPts = []; score += (parseInt(v.abcd2_age,10) || 0); if((parseInt(v.abcd2_age,10) || 0) > 0) breakdownPts.push("Age ≥60 (+1)"); score += (parseInt(v.abcd2_bp,10) || 0); if((parseInt(v.abcd2_bp,10) || 0) > 0) breakdownPts.push("BP ≥140/90 (+1)"); if (parseInt(v.abcd2_clinical_weakness,10) === 2) { score += 2; breakdownPts.push("Unilateral Weakness (+2)"); } else if (parseInt(v.abcd2_clinical_speech,10) === 1) { score += 1; breakdownPts.push("Speech Impairment w/o Weakness (+1)");} if (parseInt(v.abcd2_duration_long,10) === 2) { score += 2; breakdownPts.push("Duration ≥60min (+2)"); } else if (parseInt(v.abcd2_duration_short,10) === 1) { score += 1; breakdownPts.push("Duration 10-59min (+1)"); } score += (parseInt(v.abcd2_diabetes,10) || 0); if((parseInt(v.abcd2_diabetes,10) || 0) > 0) breakdownPts.push("Diabetes (+1)"); let patientV = `Patient's ABCD² Score: **${score} point(s)**.`; let normalR = "Score 0-3: Low risk (1-3% at 7 days)\nScore 4-5: Moderate risk (4-10% at 7 days)\nScore 6-7: High risk (8-18% at 7 days)"; let contextText = `Predicts short-term risk of stroke after TIA.\n`; if (score <= 3) contextText += `This is a **Low Risk** score. Risk of stroke at 2 days ~1%, 7 days ~1-3%. Outpatient management may be appropriate.`; else if (score <= 5) contextText += `This is a **Moderate Risk** score. Risk of stroke at 2 days ~4%, 7 days ~4-10%. Hospital admission usually recommended for urgent workup.`; else contextText += `This is a **High Risk** score. Risk of stroke at 2 days ~8%, 7 days ~8-18%. Urgent hospital admission and evaluation required.`; return { result: `${score}`, unit: 'points', formula: 'ABCD²: Sum points for Age, BP, Clinical (Weakness/Speech), Duration, Diabetes.', breakdown: `Points = ${breakdownPts.join(', ') || 'None'} = ${score}`, visualization: { type: 'circle', value: score, max: 7, color: score >=6 ? '#F87171' : (score >=4 ? '#FBBF24' : '#10B981') }, interpretation: {patientValue: patientV, normalRange: normalR, context: contextText} }; }, keywords: 'abcd2, tia, transient ischemic attack, stroke risk, neurology' },
+                        "NIH Stroke Scale (NIHSS)": { inputs: [ {id:'nihss_loc_commands', label:'Level of Consciousness (Commands)', type:'select', options:[{text:'Obeys both (0)', value:0},{text:'Obeys one (1)', value:1},{text:'Obeys neither (2)', value:2}]}, {id:'nihss_gaze', label:'Best Gaze', type:'select', options:[{text:'Normal (0)', value:0},{text:'Partial gaze palsy (1)', value:1},{text:'Forced deviation (2)', value:2}]}, {id:'nihss_motor_arm_l', label:'Motor Arm Left', type:'select', options:[{text:'No drift (0)',value:0},{text:'Drift (1)',value:1},{text:'Some effort vs gravity (2)',value:2},{text:'No effort vs gravity (3)',value:3},{text:'No movement (4)',value:4}]}, {id:'nihss_language', label:'Best Language', type:'select', options:[{text:'Normal (0)',value:0},{text:'Mild-moderate aphasia (1)',value:1},{text:'Severe aphasia (2)',value:2},{text:'Mute/Global aphasia (3)',value:3}]} ], calculate: (v) => { return { result: "Complex", unit: "score", formula: "NIHSS: Sum of scores from 11-15 item neurologic exam.", breakdown: "Calculation not performed by this tool. Administered by trained professionals.", interpretation: { patientValue: "NIHSS Score: **Complex Assessment**.", normalRange: "Score range: 0-42. Higher score = greater stroke severity.\n0: No stroke symptoms\n1-4: Minor stroke\n5-15: Moderate stroke\n16-20: Moderate-severe stroke\n21-42: Severe stroke", context: "NIHSS quantifies stroke impairment. Inputs are a small sample. **Full administration and scoring requires specific training and all 11-15 items (depending on version). This tool is for informational concept only.**" } }; }, keywords: 'nihss, nih stroke scale, stroke severity, neurology, acute stroke' }
+                    }
+                },
+                "Gastroenterology": {
+                    items: {
+                        "Child-Pugh Score": { inputs: [ { id: 'cpugh_bili', label: 'Total Bilirubin', type: 'select', options: [{text: '<2 mg/dL (<34 μmol/L) (1 pt)', value: 1}, {text: '2-3 mg/dL (34-50 μmol/L) (2 pts)', value: 2}, {text: '>3 mg/dL (>50 μmol/L) (3 pts)', value: 3}] }, { id: 'cpugh_albumin', label: 'Serum Albumin', type: 'select', options: [{text: '>3.5 g/dL (1 pt)', value: 1}, {text: '2.8-3.5 g/dL (2 pts)', value: 2}, {text: '<2.8 g/dL (3 pts)', value: 3}] }, { id: 'cpugh_inr', label: 'INR', type: 'select', options: [{text: '<1.7 (1 pt)', value: 1}, {text: '1.7-2.3 (2 pts)', value: 2}, {text: '>2.3 (3 pts)', value: 3}] }, { id: 'cpugh_ascites', label: 'Ascites', type: 'select', options: [{text: 'None (1 pt)', value: 1}, {text: 'Mild/Slight (diuretic responsive) (2 pts)', value: 2}, {text: 'Moderate/Severe (diuretic refractory) (3 pts)', value: 3}] }, { id: 'cpugh_enceph', label: 'Hepatic Encephalopathy', type: 'select', options: [{text: 'None (Grade 0) (1 pt)', value: 1}, {text: 'Grade 1-2 (Mild-Moderate) (2 pts)', value: 2}, {text: 'Grade 3-4 (Severe) (3 pts)', value: 3}] } ], calculate: (v) => { let score = 0; let breakdownPts = []; Object.keys(v).forEach(key => { const val = parseInt(v[key], 10) || 0; score += val; if (val > 0) breakdownPts.push(`${key.replace('cpugh_','').charAt(0).toUpperCase() + key.slice(7)}: +${val}pt`); }); let patientV = `Patient's Child-Pugh Score: **${score} point(s)**.`; let className = ""; let oneYrSurvival = ""; let twoYrSurvival = ""; if (score <= 6) { className = "Class A"; oneYrSurvival = "100%"; twoYrSurvival = "85%"; } else if (score <= 9) { className = "Class B"; oneYrSurvival = "81%"; twoYrSurvival = "57%"; } else { className = "Class C"; oneYrSurvival = "45%"; twoYrSurvival = "35%"; } let normalR = "Class A (5-6 pts): Least severe disease\nClass B (7-9 pts): Moderately severe\nClass C (10-15 pts): Most severe disease"; let contextText = `Score of ${score} places patient in **Child-Pugh ${className}**.\nPrognosis (approx. survival):\n1-Year: ${oneYrSurvival}\n2-Year: ${twoYrSurvival}\nUsed to assess prognosis of chronic liver disease, mainly cirrhosis.`; return { result: `${score} (${className})`, unit: 'points', formula: 'Sum of points for Bilirubin, Albumin, INR, Ascites, Encephalopathy.', breakdown: `Points = ${breakdownPts.join(', ') || 'None'} = ${score}`, visualization: { type: 'circle', value: score, max: 15, color: score >9 ? '#F87171' : (score >6 ? '#FBBF24' : '#10B981') }, interpretation: {patientValue: patientV, normalRange: normalR, context: contextText} }; }, keywords: 'child-pugh, cirrhosis, liver disease, prognosis, hepatology, gastroenterology' },
+                        "MELD Score (Model for End-Stage Liver Disease)": { inputs: [ { id: 'meld_creat', label: 'Serum Creatinine', unit: 'mg/dL', placeholder: 'e.g., 1.5' }, { id: 'meld_bili', label: 'Total Bilirubin', unit: 'mg/dL', placeholder: 'e.g., 2.0' }, { id: 'meld_inr', label: 'INR', unit: '', placeholder: 'e.g., 1.2' }, { id: 'meld_dialysis', label: 'Dialysis twice in last week?', type: 'select', options:[{text:'No', value:0}, {text:'Yes', value:1}]} ], calculate: (v) => { let creat = Number(v.meld_creat); let bili = Number(v.meld_bili); let inr = Number(v.meld_inr); const dialysis = parseInt(v.meld_dialysis,10) || 0; if (isNaN(creat) || isNaN(bili) || isNaN(inr)) { creat = 0; bili = 0; inr = 0; } /* Handle unentered values for calculation */ creat = creat === 0 ? 1.0 : creat; /* Default to 1 if not entered for log */ bili = bili === 0 ? 1.0 : bili; inr = inr === 0 ? 1.0 : inr; creat = Math.max(1, Math.min(creat, 4)); if (dialysis === 1) creat = 4.0; bili = Math.max(1, bili); inr = Math.max(1, inr); let score = (0.957 * Math.log(creat)) + (0.378 * Math.log(bili)) + (1.120 * Math.log(inr)) + 0.643; score = Math.round(score * 10); if (score < 6 && (Number(v.meld_creat) > 0 || Number(v.meld_bili) > 0 || Number(v.meld_inr) > 0 || dialysis > 0) ) score = 6; /* MELD minimum if any input */ else if (!(Number(v.meld_creat) > 0 || Number(v.meld_bili) > 0 || Number(v.meld_inr) > 0 || dialysis > 0)) score = 0; /* If no inputs, score is 0 */ if (score > 40) score = 40; let patientV = `Patient's MELD Score: **${score}**.`; let normalR = "Score range: 6-40 (higher = more severe).\nUsed for liver transplant prioritization."; let contextText = `MELD score estimates 3-month mortality in end-stage liver disease. Factors like serum sodium (MELD-Na) can further refine prognosis. A higher score generally indicates greater urgency for transplantation.\nExample 3-month mortality by score (approx):\nScore <9: ~1.9%\nScore 10-19: ~6.0%\nScore 20-29: ~19.6%\nScore 30-39: ~52.6%\nScore ≥40: ~71.3%`; if (score === 0 && !(Number(v.meld_creat) > 0 || Number(v.meld_bili) > 0 || Number(v.meld_inr) > 0 || dialysis > 0)) contextText = "Enter lab values to calculate MELD score."; return { result: `${score}`, unit: 'points', formula: 'MELD = 10 * [0.957 * ln(Cr) + 0.378 * ln(Bili) + 1.120 * ln(INR)] + 6.43 (adjustments for dialysis, min/max values)', breakdown: `Using: Cr=${creat.toFixed(1)}, Bili=${bili.toFixed(1)}, INR=${inr.toFixed(1)}. (Values capped/floored per MELD rules. Dialysis sets Cr to 4.0). Calculated Score (before rounding/capping 6-40): ${((0.957 * Math.log(creat)) + (0.378 * Math.log(bili)) + (1.120 * Math.log(inr)) + 0.643) * 10 .toFixed(1)}. Final score: ${score}`, interpretation: {patientValue: patientV, normalRange: normalR, context: contextText} }; }, keywords: 'meld, liver transplant, end-stage liver disease, cirrhosis, hepatology, gastroenterology' }
+                    }
+                },
+                "Perioperative": {
+                    items: {
+                        "HAS-BLED Score": { inputs: [ { id: 'hasbled_h', label: 'Hypertension (uncontrolled SBP >160)', type: 'select', options: [{text: 'No (0 pts)', value: 0}, {text: 'Yes (+1 pt)', value: 1}] }, { id: 'hasbled_a_renal', label: 'Abnormal Renal Fx (CrCl <50 or dialysis/transplant)', type: 'select', options: [{text: 'No (0 pts)', value: 0}, {text: 'Yes (+1 pt)', value: 1}] }, { id: 'hasbled_a_liver', label: 'Abnormal Liver Fx (Cirrhosis or Bili >2xN, AST/ALT >3xN)', type: 'select', options: [{text: 'No (0 pts)', value: 0}, {text: 'Yes (+1 pt)', value: 1}] }, { id: 'hasbled_s', label: 'Stroke History', type: 'select', options: [{text: 'No (0 pts)', value: 0}, {text: 'Yes (+1 pt)', value: 1}] }, { id: 'hasbled_b', label: 'Bleeding History or Predisposition', type: 'select', options: [{text: 'No (0 pts)', value: 0}, {text: 'Yes (+1 pt)', value: 1}] }, { id: 'hasbled_l', label: 'Labile INRs (TTR <60% on Warfarin)', type: 'select', options: [{text: 'No/Not on Warfarin (0 pts)', value: 0}, {text: 'Yes (+1 pt)', value: 1}] }, { id: 'hasbled_e', label: 'Elderly (Age >65 years)', type: 'select', options: [{text: 'No (0 pts)', value: 0}, {text: 'Yes (+1 pt)', value: 1}] }, { id: 'hasbled_d_drugs', label: 'Drugs (Antiplatelets/NSAIDs concomitantly)', type: 'select', options: [{text: 'No (0 pts)', value: 0}, {text: 'Yes (+1 pt)', value: 1}] }, { id: 'hasbled_d_alcohol', label: 'Alcohol (≥8 drinks/week)', type: 'select', options: [{text: 'No (0 pts)', value: 0}, {text: 'Yes (+1 pt)', value: 1}] } ], calculate: (v) => { let score = 0; let breakdownPts = []; Object.keys(v).forEach(key => { const val = parseInt(v[key], 10) || 0; score += val; if (val > 0) breakdownPts.push(`${key.replace('hasbled_','').toUpperCase()}: +${val}pt`); }); let patientV = `Patient's HAS-BLED Score: **${score} point(s)**.`; let normalR = "Score 0-1: Low risk\nScore 2: Moderate risk\nScore ≥3: High risk of major bleeding."; let contextText = `Estimates 1-year risk of major bleeding in AFib patients on anticoagulation.\n`; if (score <= 1) contextText += `This is a **Low Risk** score (approx. 1-2% bleed risk/year). Anticoagulation benefits likely outweigh risks.`; else if (score === 2) contextText += `This is a **Moderate Risk** score (approx. 2-4% bleed risk/year). Caution and regular review. Address modifiable risk factors.`; else contextText += `This is a **High Risk** score (approx. 4-12%+ bleed risk/year). High caution, address modifiable risk factors. Consider alternatives or closer monitoring if anticoagulation is essential.`; return { result: `${score}`, unit: 'points', formula: 'HAS-BLED: Sum points for Hypertension, Abnormal renal/liver, Stroke, Bleeding, Labile INR, Elderly, Drugs/alcohol.', breakdown: `Points = ${breakdownPts.join(', ') || 'None'} = ${score}`, visualization: { type: 'circle', value: score, max: 9, color: score >=3 ? '#F87171' : (score >=2 ? '#FBBF24' : '#10B981') }, interpretation: {patientValue: patientV, normalRange: normalR, context: contextText} }; }, keywords: 'has-bled, hasbled, bleeding risk, anticoagulation, afib, warfarin, doac, perioperative, cardiology' },
+                        "Revised Cardiac Risk Index (RCRI / Lee Score)": { inputs: [ { id: 'rcri_surgery', label: 'High-Risk Surgery (intraperitoneal, -thoracic, suprainguinal vascular)', type: 'select', options: [{text: 'No (0 pts)', value: 0}, {text: 'Yes (+1 pt)', value: 1}] }, { id: 'rcri_ihd', label: 'History of Ischemic Heart Disease (MI, +stress test, angina, Q waves)', type: 'select', options: [{text: 'No (0 pts)', value: 0}, {text: 'Yes (+1 pt)', value: 1}] }, { id: 'rcri_hf', label: 'History of Congestive Heart Failure', type: 'select', options: [{text: 'No (0 pts)', value: 0}, {text: 'Yes (+1 pt)', value: 1}] }, { id: 'rcri_cvd', label: 'History of Cerebrovascular Disease (Stroke or TIA)', type: 'select', options: [{text: 'No (0 pts)', value: 0}, {text: 'Yes (+1 pt)', value: 1}] }, { id: 'rcri_insulin', label: 'Preoperative Insulin Treatment for Diabetes', type: 'select', options: [{text: 'No (0 pts)', value: 0}, {text: 'Yes (+1 pt)', value: 1}] }, { id: 'rcri_creat', label: 'Preoperative Serum Creatinine >2.0 mg/dL (>177 μmol/L)', type: 'select', options: [{text: 'No (0 pts)', value: 0}, {text: 'Yes (+1 pt)', value: 1}] } ], calculate: (v) => { let score = 0; let breakdownPts = []; Object.keys(v).forEach(key => { const val = parseInt(v[key], 10) || 0; score += val; if (val > 0) breakdownPts.push(`${key.replace('rcri_','').toUpperCase()}: +${val}pt`); }); let patientV = `Patient's RCRI (Lee Score): **${score} point(s)**.`; let riskClass = ""; let complicationRate = ""; if (score === 0) { riskClass = "Class I"; complicationRate = "0.4%"; } else if (score === 1) { riskClass = "Class II"; complicationRate = "0.9%"; } else if (score === 2) { riskClass = "Class III"; complicationRate = "6.6%"; } else { riskClass = "Class IV"; complicationRate = "11%"; } let normalR = "0 pts (Class I): ~0.4% risk\n1 pt (Class II): ~0.9% risk\n2 pts (Class III): ~6.6% risk\n≥3 pts (Class IV): ~11% risk"; let contextText = `Predicts risk of major cardiac complications (MI, pulmonary edema, VF/arrest, complete heart block) after non-cardiac surgery.\nScore ${score} (${riskClass}) indicates an approximate major cardiac complication rate of **${complicationRate}**.`; return { result: `${score} (${riskClass})`, unit: 'points', formula: 'RCRI: Sum points for High-risk surgery, IHD, HF, CVD, Insulin, Creatinine >2.', breakdown: `Points = ${breakdownPts.join(', ') || 'None'} = ${score}`, interpretation: {patientValue: patientV, normalRange: normalR, context: contextText} }; }, keywords: 'rcri, lee score, cardiac risk, perioperative, surgery, MACE' }
+                    }
+                }
+            };
+            
+            const grid = document.getElementById('calculators-grid');
+            const noResultsDiv = document.getElementById('no-results');
+            const modal = document.getElementById('calculator-modal');
+            const modalTitle = document.getElementById('modal-title');
+            const modalInputs = document.getElementById('modal-inputs');
+            const modalResultCard = document.getElementById('modal-result-card');
+            const modalCloseBtn = document.getElementById('modal-close-btn');
+            const modalCalculateBtn = document.getElementById('modal-calculate-btn');
+            const modalClearBtn = document.getElementById('modal-clear-btn');
+            const searchBar = document.getElementById('search-bar');
+            const themeToggle = document.getElementById('theme-toggle');
+            const categoryTabsDiv = document.getElementById('category-tabs');
+            const mainHeader = document.getElementById('main-header');
+            const categoryTabsContainer = document.getElementById('category-tabs-container');
+            const mainContent = document.getElementById('main-content');
+            
+            if (!grid || !noResultsDiv || !modal || !modalTitle || !modalInputs || !modalResultCard || !modalCloseBtn || !modalCalculateBtn || !modalClearBtn || !searchBar || !themeToggle || !categoryTabsDiv || !mainHeader || !categoryTabsContainer || !mainContent) {
+                console.error("Critical DOM elements not found. Aborting initialization.");
+                document.body.innerHTML = '<div style="padding: 20px; text-align: center; font-family: sans-serif; color: red; background-color: white;">Critical application elements are missing from the HTML. Initialization failed. Please check the browser console for more details.</div>';
+                return; 
+            }
+
+            let currentCalculator = null;
+            let shapeColorIndex = 0;
+            const shapeColors = [ 'bg-sky-500', 'bg-amber-500', 'bg-emerald-500', 'bg-indigo-500', 'bg-rose-500', 'bg-cyan-500', 'bg-fuchsia-500', 'bg-lime-500', 'bg-pink-500', 'bg-teal-500', 'bg-orange-500', 'bg-purple-500' ];
+
+            const getInitials = (name) => {
+                const words = name.split(/[\s-]+/);
+                if (words.length === 1) return name.substring(0,2).toUpperCase();
+                let initials = words[0][0];
+                if (words.length > 1 && words[1] && words[1][0]) {
+                     initials += words[1][0];
+                } else if (words[0].length > 1) {
+                    initials += words[0][1];
+                }
+                return initials.toUpperCase();
+            };
+
+            function updateStickyElementPositions() {
+                if (mainHeader && categoryTabsContainer) {
+                    const headerHeight = mainHeader.offsetHeight;
+                    categoryTabsContainer.style.top = `${headerHeight}px`;
+
+                    const tabsHeight = categoryTabsContainer.offsetHeight;
+                    const totalStickyHeaderHeight = headerHeight + tabsHeight;
+
+                    document.querySelectorAll('.category-title-sticky').forEach(h2 => {
+                        h2.style.top = `${totalStickyHeaderHeight}px`;
+                    });
+                }
+            }
+
+            function applyTheme(isDark) {
+                document.documentElement.classList.toggle('dark', isDark);
+                document.getElementById('theme-icon-light').classList.toggle('hidden', isDark);
+                document.getElementById('theme-icon-dark').classList.toggle('hidden', !isDark);
+            }
+
+            const prefersDark = window.matchMedia('(prefers-color-scheme: dark)');
+            const savedTheme = localStorage.getItem('theme');
+            applyTheme(savedTheme === 'dark' || (savedTheme === null && prefersDark.matches));
+
+            themeToggle.addEventListener('click', () => {
+                const isDark = document.documentElement.classList.toggle('dark');
+                localStorage.setItem('theme', isDark ? 'dark' : 'light');
+                applyTheme(isDark);
+            });
+
+            function renderGrid(filter = '') {
+                grid.innerHTML = '';
+                categoryTabsDiv.innerHTML = '';
+                let hasResults = false;
+                shapeColorIndex = 0; 
+
+                Object.keys(calculators).forEach(category => {
+                    const categoryId = category.replace(/\s+/g, '-').toLowerCase();
+                    const filteredItems = Object.entries(calculators[category].items).filter(([name, data]) => {
+                         const keywords = data.keywords || '';
+                         return name.toLowerCase().includes(filter.toLowerCase()) || keywords.toLowerCase().includes(filter.toLowerCase());
+                    });
+                    
+                    const tab = document.createElement('button');
+                    tab.className = 'category-tab px-3 py-1.5 text-sm font-medium rounded-md text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition whitespace-nowrap';
+                    tab.textContent = category;
+                    tab.dataset.target = `#category-${categoryId}`;
+                    tab.addEventListener('click', () => scrollToCategory(category));
+                    categoryTabsDiv.appendChild(tab);
+                    
+                    if (filteredItems.length === 0 && filter) return; // Only skip if filtering and no results in category
+                    if (filteredItems.length === 0 && !filter) { // If not filtering, still show category title if no items (or handle differently)
+                         // Option: Could add a placeholder like "No calculators in this category"
+                         // For now, it will just create the title and an empty grid for it
+                    }
+
+
+                    hasResults = hasResults || filteredItems.length > 0;
+
+                    const categoryContainer = document.createElement('div');
+                    categoryContainer.className = 'mb-10';
+                    categoryContainer.id = `category-${categoryId}`;
+                    
+                    const categoryTitleH2 = document.createElement('h2');
+                    categoryTitleH2.className = 'category-title-sticky text-xl font-bold mb-4'; // Text color handled by .category-title-sticky
+                    categoryTitleH2.textContent = category;
+                    categoryContainer.appendChild(categoryTitleH2);
+                    
+                    const itemsGrid = document.createElement('div');
+                    itemsGrid.className = 'grid grid-cols-1 sm:grid-cols-2 gap-4';
+                    
+                    filteredItems.forEach(([calcName, calcData]) => {
+                        const card = document.createElement('div');
+                        card.className = 'card bg-white dark:bg-slate-800 p-4 rounded-xl shadow-md hover:shadow-lg hover:-translate-y-1 transition-all cursor-pointer flex items-center space-x-3';
+                        card.dataset.calculator = calcName;
+                        card.setAttribute('role', 'button');
+                        card.setAttribute('tabindex', '0');
+                        card.setAttribute('aria-label', `Open ${calcName} calculator`);
+
+                        const shapeType = shapeColorIndex % 2 === 0 ? 'shape-circle' : 'shape-square';
+                        const bgColor = shapeColors[shapeColorIndex % shapeColors.length];
+                        shapeColorIndex++;
+
+                        card.innerHTML = `
+                            <div class="shape-display ${shapeType} ${bgColor}">
+                                ${getInitials(calcName)}
+                            </div>
+                            <div>
+                                <h3 class="font-semibold text-slate-800 dark:text-slate-100">${calcName}</h3>
+                                <p class="text-sm text-slate-500 dark:text-slate-400">${category}</p>
+                            </div>
+                        `;
+                        itemsGrid.appendChild(card);
+                    });
+
+                    categoryContainer.appendChild(itemsGrid);
+                    grid.appendChild(categoryContainer);
+                });
+                noResultsDiv.classList.toggle('hidden', hasResults || !filter); 
+
+                if (categoryTabsDiv.firstChild && categoryTabsDiv.firstChild instanceof HTMLElement) {
+                    categoryTabsDiv.firstChild.classList.add('active-tab');
+                }
+                updateStickyElementPositions();
+            }
+            
+             function scrollToCategory(categoryName) {
+                document.querySelectorAll('.category-tab').forEach(t => t.classList.remove('active-tab'));
+                const activeTab = Array.from(document.querySelectorAll('.category-tab')).find(t => t.textContent === categoryName);
+                if (activeTab) {
+                    activeTab.classList.add('active-tab');
+                    activeTab.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+                }
+
+                const categoryId = `category-${categoryName.replace(/\s+/g, '-').toLowerCase()}`;
+                const categoryElement = document.getElementById(categoryId);
+                
+                if (categoryElement && mainHeader && categoryTabsContainer) {
+                    const headerActualHeight = mainHeader.offsetHeight;
+                    const tabsActualHeight = categoryTabsContainer.offsetHeight;
+                    
+                    const elementRect = categoryElement.getBoundingClientRect();
+                    const absoluteElementTop = elementRect.top + window.scrollY;
+            
+                    // Adjust targetScrollY to account for the category title itself if it becomes sticky
+                    // And a small buffer so the title isn't flush against the tabs bar.
+                    const titleHeight = categoryElement.querySelector('.category-title-sticky') ? categoryElement.querySelector('.category-title-sticky').offsetHeight : 0;
+                    const targetScrollY = absoluteElementTop - headerActualHeight - tabsActualHeight - (titleHeight > 0 ? 0 : 16) ; // If title is sticky, it's already part of the offset.
+            
+                    window.scrollTo({
+                        top: targetScrollY,
+                        behavior: 'smooth'
+                    });
+                }
+            }
+
+            function openModal(calcName) {
+                const categoryName = Object.keys(calculators).find(cat => calculators[cat].items[calcName]);
+                if (!categoryName) return;
+                currentCalculator = calculators[categoryName].items[calcName];
+                
+                if (!currentCalculator) return;
+                
+                modalTitle.textContent = calcName;
+                modalInputs.innerHTML = '';
+                
+                currentCalculator.inputs.forEach(input => {
+                    let inputHTML = '';
+                    const placeholderText = input.placeholder || (input.unit ? `0.0 ${input.unit}` : '0.0');
+                    if (input.type === 'select') {
+                        const optionsHTML = input.options.map(opt => `<option value="${opt.value}">${opt.text}</option>`).join('');
+                        inputHTML = `
+                            <div class="md:col-span-${input.options.length > 3 ? 2 : 1}">
+                                <label for="${input.id}" class="block mb-1 text-xs font-medium text-slate-600 dark:text-slate-300">${input.label}</label>
+                                <select id="${input.id}" class="bg-slate-50 border border-slate-300 text-slate-900 dark:text-slate-100 dark:bg-slate-700 dark:border-slate-600 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2">
+                                    ${optionsHTML}
+                                </select>
+                            </div>`;
+                    } else if (input.type === 'date') {
+                        inputHTML = `
+                             <div class="md:col-span-2">
+                                <label for="${input.id}" class="block mb-1 text-xs font-medium text-slate-600 dark:text-slate-300">${input.label}</label>
+                                <input type="date" id="${input.id}" class="bg-slate-50 border border-slate-300 text-slate-900 dark:text-slate-100 dark:bg-slate-700 dark:border-slate-600 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2">
+                            </div>`;
+                    } else { 
+                         const inputType = input.type === 'text' ? 'text' : 'number';
+                         inputHTML = `
+                            <div>
+                                <label for="${input.id}" class="block mb-1 text-xs font-medium text-slate-600 dark:text-slate-300">${input.label}</label>
+                                <div class="relative">
+                                    <input type="${inputType}" id="${input.id}" class="bg-slate-50 border border-slate-300 text-slate-900 dark:text-slate-100 dark:bg-slate-700 dark:border-slate-600 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2 ${input.unit ? 'pr-12' : ''} placeholder-slate-400 dark:placeholder-slate-500" placeholder="${placeholderText}" ${inputType === 'number' ? 'step="any"' : ''}>
+                                    ${input.unit ? `<span class="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-500 dark:text-slate-400 text-xs pointer-events-none">${input.unit}</span>` : ''}
+                                </div>
+                                <p id="error-${input.id}" class="mt-1 text-xs text-red-600 hidden"></p>
+                            </div>
+                        `;
+                    }
+                    modalInputs.innerHTML += inputHTML;
+                });
+
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+                document.body.style.overflow = 'hidden';
+                const firstInput = modalInputs.querySelector('input, select');
+                if (firstInput) firstInput.focus();
+            }
+            
+            function closeModal() {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+                document.body.style.overflow = '';
+                modalResultCard.classList.add('hidden');
+                modalResultCard.innerHTML = ''; 
+            }
+            
+            function clearModal() {
+                modalInputs.querySelectorAll('input').forEach(input => input.value = '');
+                modalInputs.querySelectorAll('select').forEach(select => select.selectedIndex = 0);
+                modalInputs.querySelectorAll('[id^=error-]').forEach(err => {
+                    err.classList.add('hidden');
+                    err.textContent = '';
+                });
+                modalResultCard.classList.add('hidden');
+                modalResultCard.innerHTML = '';
+            }
+
+            function performCalculation() {
+                let values = {};
+                let isValid = true;
+                
+                modalInputs.querySelectorAll('[id^=error-]').forEach(errEl => {
+                    errEl.classList.add('hidden');
+                    errEl.textContent = '';
+                });
+
+                currentCalculator.inputs.forEach(inputDef => {
+                    const inputEl = document.getElementById(inputDef.id);
+                    const errorEl = document.getElementById(`error-${inputDef.id}`);
+                    
+                    if (!inputEl.value && inputDef.type !== 'select' && inputDef.type !== 'checkbox') { 
+                        if (errorEl) {
+                           errorEl.textContent = 'This field is required.';
+                           errorEl.classList.remove('hidden');
+                        }
+                        isValid = false;
+                    }
+                    values[inputDef.id] = inputEl.value;
+                });
+                
+                if (isValid) {
+                    const calculation = currentCalculator.calculate(values);
+                    if (calculation.error) {
+                        const firstInputId = currentCalculator.inputs[0].id;
+                        const targetErrorEl = document.getElementById(`error-${firstInputId}`) || modalInputs.querySelector('[id^=error-]');
+                        if (targetErrorEl) {
+                           targetErrorEl.textContent = calculation.error;
+                           targetErrorEl.classList.remove('hidden');
+                        } else { 
+                            modalResultCard.innerHTML = `<div class="p-3 bg-red-100 text-red-700 rounded-md text-sm">${calculation.error}</div>`;
+                            modalResultCard.classList.remove('hidden');
+                        }
+                    } else {
+                        displayResult(modalResultCard, calculation);
+                    }
+                }
+            }
+
+            function displayResult(resultCard, data) {
+                 let visualizationHTML = '';
+                 if (data.visualization) {
+                    if (data.visualization.type === 'gauge') {
+                         const percentage = Math.min(100, Math.max(0, (data.visualization.value / data.visualization.max) * 100));
+                         const rangesHTML = data.visualization.ranges.map((range, i) => {
+                             const prevTill = i > 0 ? data.visualization.ranges[i-1].till : 0;
+                             const width = Math.max(0, ((range.till - prevTill) / data.visualization.max) * 100);
+                             return `<div class="${range.color} h-full" style="width: ${width}%" title="${range.label || range.till}"></div>`;
+                         }).join('');
+
+                         visualizationHTML = `
+                             <div class="mt-4">
+                                 <div class="text-xs text-slate-500 dark:text-slate-400 mb-1 flex justify-between px-1">
+                                     ${data.visualization.ranges.map(r => `<span>${r.label || r.till}</span>`).join('')}
+                                 </div>
+                                 <div class="relative h-2.5 w-full bg-slate-200 dark:bg-slate-600 rounded-full flex overflow-hidden">${rangesHTML}</div>
+                                 <div class="relative h-4 mt-1">
+                                     <div class="absolute top-0 w-1 h-3 bg-slate-800 dark:bg-white rounded-full shadow-md" style="left: calc(${percentage}% - 2px);"></div>
+                                 </div>
+                             </div>`;
+                    }
+                     if (data.visualization.type === 'circle') {
+                         const radius = 40; 
+                         const strokeWidth = 8;
+                         const circumference = 2 * Math.PI * radius;
+                         const valForOffset = isNaN(parseFloat(data.visualization.value)) ? 0 : parseFloat(data.visualization.value);
+                         const maxForOffset = isNaN(parseFloat(data.visualization.max)) || parseFloat(data.visualization.max) === 0 ? 1 : parseFloat(data.visualization.max);
+                         const offsetValue = circumference - Math.max(0, (valForOffset / maxForOffset) * circumference);
+
+                         visualizationHTML = `
+                            <div class="flex justify-center items-center my-3 h-24 relative">
+                                <svg class="w-24 h-24 absolute">
+                                    <circle class="text-slate-200 dark:text-slate-600" stroke-width="${strokeWidth}" stroke="currentColor" fill="transparent" r="${radius}" cx="48" cy="48"/>
+                                    <circle class="progress-ring__circle" stroke-width="${strokeWidth}" stroke="${data.visualization.color || '#3b82f6'}" fill="transparent" r="${radius}" cx="48" cy="48" style="stroke-dasharray: ${circumference}; stroke-dashoffset: ${circumference};"/>
+                                </svg>
+                                <div class="absolute text-center">
+                                    <span class="text-2xl font-bold text-slate-800 dark:text-slate-100">${data.result}</span>
+                                    <span class="block text-xs font-medium text-slate-500 dark:text-slate-400">${data.unit}</span>
+                                 </div>
+                            </div>`;
+                         setTimeout(() => {
+                            const circle = resultCard.querySelector('.progress-ring__circle');
+                            if(circle) circle.style.strokeDashoffset = offsetValue;
+                         }, 50);
+                     }
+                 }
+                
+                const formatWithBold = (text) => text ? text.replace(/\*\*(.*?)\*\*/g, '<strong class="text-slate-800 dark:text-slate-100">$1</strong>') : '';
+
+                resultCard.innerHTML = `
+                    <div class="fade-in space-y-3">
+                        <h3 class="text-md font-semibold text-slate-700 dark:text-slate-300">Result</h3>
+                        
+                        ${!data.visualization || data.visualization.type !== 'circle' ? `<div class="text-3xl font-bold text-blue-600 dark:text-blue-400">${data.result}<span class="text-lg ml-1.5 text-slate-500 dark:text-slate-400 font-medium">${data.unit}</span></div>` : ''}
+                        
+                        ${visualizationHTML}
+                        
+                        ${data.interpretation ? `
+                        <div class="pt-2">
+                            <h4 class="text-sm font-semibold text-slate-600 dark:text-slate-400 mb-1">Interpretation</h4>
+                            <div class="text-xs space-y-1 text-slate-500 dark:text-slate-400">
+                                ${data.interpretation.patientValue ? `<p>${formatWithBold(data.interpretation.patientValue)}</p>` : ''}
+                                ${data.interpretation.normalRange ? `<p><span class="font-medium text-slate-600 dark:text-slate-300">Reference:</span><br><span class="whitespace-pre-line">${data.interpretation.normalRange}</span></p>` : ''}
+                                ${data.interpretation.context ? `<p>${formatWithBold(data.interpretation.context)}</p>` : ''}
+                            </div>
+                        </div>` : ''}
+                        
+                        <details class="text-xs pt-2">
+                            <summary class="cursor-pointer font-semibold text-slate-600 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400">Show Calculation Details</summary>
+                            <div class="mt-2 bg-slate-200 dark:bg-slate-600 p-2.5 rounded-md space-y-1">
+                                ${data.formula ? `<p class="font-mono text-xs text-slate-500 dark:text-slate-400"><strong>Formula:</strong> ${data.formula}</p>` : ''}
+                                ${data.breakdown ? `<p class="font-mono text-xs text-slate-500 dark:text-slate-400 whitespace-pre-wrap"><strong>Breakdown:</strong>\n${data.breakdown}</p>` : ''}
+                            </div>
+                        </details>
+                    </div>
+                `;
+                resultCard.classList.remove('hidden');
+                resultCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+
+            grid.addEventListener('click', (e) => {
+                const card = e.target.closest('[data-calculator]');
+                if (card) {
+                    openModal(card.dataset.calculator);
+                }
+            });
+             grid.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    const card = e.target.closest('[data-calculator]');
+                    if (card) {
+                        e.preventDefault();
+                        openModal(card.dataset.calculator);
+                    }
+                }
+            });
+
+            modalCloseBtn.addEventListener('click', closeModal);
+            modalClearBtn.addEventListener('click', clearModal);
+            modalCalculateBtn.addEventListener('click', performCalculation);
+            modal.addEventListener('click', (e) => {
+                if(e.target === modal) closeModal(); 
+            });
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && !modal.classList.contains('hidden')) {
+                    closeModal();
+                }
+            });
+            
+            searchBar.addEventListener('input', (e) => {
+                renderGrid(e.target.value);
+            });
+
+            window.addEventListener('resize', updateStickyElementPositions);
+            
+            renderGrid();
+            updateStickyElementPositions(); 
+        });
+    </script>
+</body>
+</html>
